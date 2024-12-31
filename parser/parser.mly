@@ -33,10 +33,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
    has 3 reduce/reduce conflicts on RPAREN, LPAREN, and LBRACK. If you
    modify the grammar, you should check that this is still the case. *)
 
-%{
-  open Context
-  open Declarator
-%}
+%parameter<Context : Context.Packed>
 
 %token<string> NAME
 %token VARIABLE TYPE
@@ -140,9 +137,9 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 %token EOF
 
-%type<context> save_context parameter_type_list function_definition1
+%type<Context.snapshot> save_context parameter_type_list function_definition1
 %type<string> typedef_name var_name general_identifier enumeration_constant
-%type<declarator> declarator direct_declarator
+%type<Context.snapshot Declarator.t> declarator direct_declarator
 
 (* There is a reduce/reduce conflict in the grammar. It corresponds to the
    conflict in the second declaration in the following snippet:
@@ -249,11 +246,11 @@ general_identifier:
 
 save_context:
 | (* empty *)
-    { save_context () }
+    { Context.save_context () }
 
 scoped(X):
 | ctx = save_context x = X
-    { restore_context ctx; x }
+    { Context.restore_context ctx; x }
 
 (* [declarator_varname] and [declarator_typedefname] are like [declarator]. In
    addition, they have the side effect of introducing the declared identifier as
@@ -261,11 +258,11 @@ scoped(X):
 
 declarator_varname:
 | d = declarator
-    { declare_varname (identifier d); d }
+    { Context.declare_varname (Declarator.identifier d); d }
 
 declarator_typedefname:
 | d = declarator
-    { declare_typedefname (identifier d); d }
+    { Context.declare_typedefname (Declarator.identifier d); d }
 
 (* Merge source-level string literals. *)
 string_literal:
@@ -589,7 +586,7 @@ enumerator_list:
 enumerator:
 | i = enumeration_constant
 | i = enumeration_constant "=" constant_expression
-    { declare_varname i }
+    { Context.declare_varname i }
 
 enumeration_constant:
 | i = general_identifier
@@ -618,7 +615,7 @@ alignment_specifier:
 
 declarator:
 | ioption(pointer) d = direct_declarator
-    { other_declarator d }
+    { Declarator.other_declarator d }
 
 (* The occurrences of [save_context] inside [direct_declarator] and
    [direct_abstract_declarator] seem to serve no purpose. In fact, they are
@@ -628,18 +625,18 @@ declarator:
 
 direct_declarator:
 | i = general_identifier
-    { identifier_declarator i }
+    { Declarator.identifier_declarator i }
 | "(" save_context d = declarator ")"
     { d }
 | d = direct_declarator "[" type_qualifier_list? assignment_expression? "]"
 | d = direct_declarator "[" "static" type_qualifier_list? assignment_expression "]"
 | d = direct_declarator "[" type_qualifier_list "static" assignment_expression "]"
 | d = direct_declarator "[" type_qualifier_list? "*" "]"
-    { other_declarator d }
+    { Declarator.other_declarator d }
 | d = direct_declarator "(" ctx = scoped(parameter_type_list) ")"
-    { function_declarator d ctx }
+    { Declarator.function_declarator d ctx }
 | d = direct_declarator "(" save_context identifier_list? ")"
-    { other_declarator d }
+    { Declarator.other_declarator d }
 
 pointer:
 | "*" type_qualifier_list? pointer?
@@ -777,13 +774,13 @@ external_declaration:
 
 function_definition1:
 | declaration_specifiers d = declarator_varname
-    { let ctx = save_context () in
-      reinstall_function_context d;
+    { let ctx = Context.save_context () in
+      Declarator.reinstall_function_context (module Context) d;
       ctx }
 
 function_definition:
 | ctx = function_definition1 declaration_list? compound_statement
-    { restore_context ctx }
+    { Context.restore_context ctx }
 
 declaration_list:
 | declaration

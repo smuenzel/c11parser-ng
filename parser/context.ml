@@ -46,12 +46,25 @@ let declare_varname t id =
 let is_typedefname t id =
   StringSet.mem id t.typedefnames 
 
-(*
-(* This takes a snapshot of the current context. *)
-let save_context () =
-  !current
+module type Packed = sig
+  val declare_typedefname : string -> unit
+  val declare_varname : string -> unit
+  val is_typedefname : string -> bool
 
-(* This re-installs a snapshot as the current context. *)
-let restore_context snapshot =
-  current := snapshot
-   *)
+  type snapshot
+
+  val save_context : unit -> snapshot
+  val restore_context : snapshot -> unit
+end
+
+let create_packed () : (module Packed) =
+  (module struct
+    let t = ref { typedefnames = StringSet.empty }
+    let declare_typedefname id = t := declare_typedefname !t id
+    let declare_varname id = t := declare_varname !t id
+    let is_typedefname id = is_typedefname !t id
+
+    type snapshot = t
+    let save_context () = !t
+    let restore_context snapshot = t := snapshot
+  end)
