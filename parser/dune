@@ -8,4 +8,5 @@
 
 (menhir
    (modules parser)
+   (flags (--external-tokens C11lexer.Token))
    )

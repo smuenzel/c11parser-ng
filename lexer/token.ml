@@ -99,3 +99,5 @@ type t =
   | ATOMIC_LPAREN
   | EOF
 [@@deriving sexp]
+
+type token = t [@@deriving sexp]

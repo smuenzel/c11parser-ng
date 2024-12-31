@@ -28,6 +28,8 @@ ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 *)
 
+module Token = Token
+
 (* Identifiers *)
 let digit = [%sedlex.regexp? '0' .. '9']
 let hexadecimal_digit = [%sedlex.regexp? digit | 'A' .. 'F' | 'a' .. 'f']
