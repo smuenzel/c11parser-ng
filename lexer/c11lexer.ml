@@ -352,11 +352,15 @@ module State = struct
     ; atomic_strict_syntax : bool
     }
 
-  let create_default () =
+  let create_default
+      ?(is_typedefname = fun _ -> false) ?(atomic_strict_syntax=false) () =
     { kind = Regular
-    ; is_typedefname = (fun _ -> false)
-    ; atomic_strict_syntax = false
+    ; is_typedefname
+    ; atomic_strict_syntax
     }
+
+  let wrap t lexer =
+    fun lexbuf -> lexer t lexbuf
 end
 
 let lexer (state : State.t) (lexbuf : Sedlexing.lexbuf) : Token.t =
