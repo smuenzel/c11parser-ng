@@ -151,7 +151,7 @@ let rec initial lexbuf : Token.t =
   | hexadecimal_floating_constant ->  CONSTANT 
   | preprocessing_number          ->  failwith "These characters form a preprocessor number, but not a constant" 
   | (Chars "LuU" | ""), "'"       ->  char lexbuf; char_literal_end lexbuf; CONSTANT 
-  | (Chars "LuU" | "" | "u8"), "\"" ->  string_literal lexbuf; CONSTANT
+  | (Chars "LuU" | "" | "u8"), "\"" ->  string_literal lexbuf; STRING_LITERAL
   | "..."                         ->  ELLIPSIS 
   | "+="                          ->  ADD_ASSIGN 
   | "-="                          ->  SUB_ASSIGN 
@@ -306,73 +306,80 @@ and singleline_comment lexbuf =
   | eof    ->  () 
   | _      ->  singleline_comment lexbuf 
 
-(*
-{
 
-  (* This lexer chooses between [inital] or [initial_linebegin],
+(* This lexer chooses between [inital] or [initial_linebegin],
      depending on whether we are at the beginning of the line or
      not. *)
 
-  let lexer : lexbuf -> token =
-    fun lexbuf ->
-      if lexbuf.lex_curr_p.pos_cnum = lexbuf.lex_curr_p.pos_bol then
-        initial_linebegin lexbuf
-      else
-        initial lexbuf
+let lexer (lexbuf : Sedlexing.lexbuf) : Token.t =
+  let pos = Sedlexing.lexing_position_curr lexbuf in
+  if pos.pos_cnum = pos.pos_bol then
+    initial_linebegin lexbuf
+  else
+    initial lexbuf
 
-  (* In the following, we define a new lexer, which wraps [lexer], and applies
+(* In the following, we define a new lexer, which wraps [lexer], and applies
      the following two transformations to the token stream:
 
-     - A [NAME] token is replaced with a sequence of either [NAME VARIABLE] or
+   - A [NAME] token is replaced with a sequence of either [NAME VARIABLE] or
        [NAME TYPE]. The decision is made via a call to [Context.is_typedefname].
        The call takes place only when the second element of the sequence is
        demanded.
 
-     - When [Options.atomic_strict_syntax] is [true] and an opening parenthesis
+   - When [Options.atomic_strict_syntax] is [true] and an opening parenthesis
        [LPAREN] follows an [ATOMIC] keyword, the parenthesis is replaced by a
        special token, [ATOMIC_LPAREN], so as to allow the parser to treat it
        specially. *)
 
-  (* This second lexer is implemented using a 3-state state machine, whose
-     states are as follows. *)
+(* This second lexer is implemented using a 3-state state machine, whose
+   states are as follows. *)
 
-  type lexer_state =
-    | SRegular          (* Nothing to recall from the previous tokens. *)
-    | SAtomic           (* The previous token was [ATOMIC]. If an opening
-                           parenthesis follows, then it needs special care. *)
-    | SIdent of string  (* We have seen an identifier: we have just
-                           emitted a [NAME] token. The next token will be
-                           either [VARIABLE] or [TYPE], depending on
-                           what kind of identifier this is. *)
+module State = struct
+  module Kind = struct
+    type t =
+      | Regular          (* Nothing to recall from the previous tokens. *)
+      | Atomic           (* The previous token was [ATOMIC]. If an opening
+                            parenthesis follows, then it needs special care. *)
+      | Ident of string  (* We have seen an identifier: we have just
+                             emitted a [NAME] token. The next token will be
+                             either [VARIABLE] or [TYPE], depending on
+                             what kind of identifier this is. *)
+  end
 
-  let lexer : lexbuf -> token =
-    let st = ref SRegular in
-    fun lexbuf ->
-      match !st with
+  type t =
+    { mutable kind : Kind.t
+    ; is_typedefname : string -> bool
+    ; atomic_strict_syntax : bool
+    }
 
-      | SIdent id ->
-          st := SRegular;
-          if is_typedefname id then TYPE else VARIABLE
+  let create_default () =
+    { kind = Regular
+    ; is_typedefname = (fun _ -> false)
+    ; atomic_strict_syntax = false
+    }
+end
 
-      | SAtomic
-      | SRegular ->
-          let token = lexer lexbuf in
-          match !st, token with
-          | _, NAME id ->
-              st := SIdent id;
-              token
+let lexer (state : State.t) (lexbuf : Sedlexing.lexbuf) : Token.t =
+  match state.kind with
+  | Ident id ->
+    state.kind <- Regular;
+    if state.is_typedefname id then TYPE else VARIABLE
+  | Atomic
+  | Regular ->
+    let token = lexer lexbuf in
+    match state.kind, token with
+    | _, NAME id ->
+      state.kind <- Ident id;
+      token
 
-          | SAtomic, LPAREN ->
-              st := SRegular;
-              ATOMIC_LPAREN
+    | Atomic, LPAREN ->
+      state.kind <- Regular;
+      ATOMIC_LPAREN
 
-          | _, ATOMIC ->
-              st := (if !atomic_strict_syntax then SAtomic else SRegular);
-              token
+    | _, ATOMIC ->
+      state.kind <- (if state.atomic_strict_syntax then Atomic else Regular);
+      token
 
-          | _, _ ->
-              st := SRegular;
-              token
-
-}
-   *)
+    | _, _ ->
+      state.kind <- Regular;
+      token
