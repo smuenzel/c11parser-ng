@@ -2,5 +2,5 @@
   (name c11lexer)
   (public_name c11parser_ng.lexer)
   (libraries sedlex)
-  (preprocess (pps sedlex.ppx))
+  (preprocess (pps sedlex.ppx ppx_sexp_conv))
   )

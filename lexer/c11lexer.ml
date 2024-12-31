@@ -28,265 +28,285 @@ ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 *)
 
-{
-open Lexing
-open Context
-open Parser
-open Options
-
-let init _filename channel : Lexing.lexbuf =
-  Lexing.from_channel channel
-
-}
-
 (* Identifiers *)
-let digit = ['0'-'9']
-let hexadecimal_digit = ['0'-'9' 'A'-'F' 'a'-'f']
-let nondigit = ['_' 'a'-'z' 'A'-'Z']
+let digit = [%sedlex.regexp? '0' .. '9']
+let hexadecimal_digit = [%sedlex.regexp? digit | 'A' .. 'F' | 'a' .. 'f']
+let nondigit = [%sedlex.regexp? '_' | 'a' .. 'z' | 'A' .. 'Z']
+let digit_or_nondigit = [%sedlex.regexp? nondigit | digit]
 
-let hex_quad = hexadecimal_digit hexadecimal_digit
-                 hexadecimal_digit hexadecimal_digit
+let hex_quad = [%sedlex.regexp? Rep(hexadecimal_digit, 4)]
 let universal_character_name =
-    "\\u" hex_quad
-  | "\\U" hex_quad hex_quad
+  [%sedlex.regexp? ("\\u", hex_quad) | ("\\U", hex_quad, hex_quad)]
 
 let identifier_nondigit =
-    nondigit
-  | universal_character_name
+  [%sedlex.regexp? nondigit | universal_character_name]
 
-let identifier = identifier_nondigit (identifier_nondigit|digit)*
+let identifier =
+  [%sedlex.regexp? identifier_nondigit, Star (identifier_nondigit|digit)]
 
 (* Whitespaces. '\r' is not considered as white-space by the standard,
    but we include it in order to accept files encoded with DOS-style
    line endings.  Beware : \011 and \012 are DECIMAL escape
    codes. They correspond to vertical tab and form feed,
    respectively. *)
-let whitespace_char_no_newline = [' ' '\t' '\011' '\012' '\r']
+let whitespace_char_no_newline = [%sedlex.regexp? Chars " \t\011\012\r"]
 
 (* Integer constants *)
-let nonzero_digit = ['1'-'9']
-let decimal_constant = nonzero_digit digit*
+let nonzero_digit = [%sedlex.regexp? '1'..'9']
+let decimal_constant = [%sedlex.regexp? nonzero_digit, Star digit]
 
-let octal_digit = ['0'-'7']
-let octal_constant = '0' octal_digit*
+let octal_digit = [%sedlex.regexp? '0' .. '7']
+let octal_constant = [%sedlex.regexp? '0', Star octal_digit]
 
-let hexadecimal_prefix = "0x" | "0X"
+let hexadecimal_prefix = [%sedlex.regexp? "0x" | "0X"]
 let hexadecimal_constant =
-  hexadecimal_prefix hexadecimal_digit+
+  [%sedlex.regexp? hexadecimal_prefix, Plus hexadecimal_digit]
 
-let unsigned_suffix = ['u' 'U']
-let long_suffix = ['l' 'L']
-let long_long_suffix = "ll" | "LL"
+let unsigned_suffix = [%sedlex.regexp? 'u' | 'U']
+let long_suffix = [%sedlex.regexp? 'l' | 'L']
+let long_long_suffix = [%sedlex.regexp? "ll" | "LL" ]
 let integer_suffix =
-    unsigned_suffix long_suffix?
-  | unsigned_suffix long_long_suffix
-  | long_suffix unsigned_suffix?
-  | long_long_suffix unsigned_suffix?
+  [%sedlex.regexp?
+      ( (unsigned_suffix, Opt long_suffix)
+      | (unsigned_suffix, long_long_suffix)
+      | (long_suffix, Opt unsigned_suffix)
+      | (long_long_suffix, Opt unsigned_suffix)
+      )]
 
 let integer_constant =
-    decimal_constant integer_suffix?
-  | octal_constant integer_suffix?
-  | hexadecimal_constant integer_suffix?
+  [%sedlex.regexp?
+      ( (decimal_constant, Opt integer_suffix)
+      | (octal_constant, Opt integer_suffix)
+      | (hexadecimal_constant, Opt integer_suffix)
+      )]
 
 (* Floating constants *)
-let sign = ['-' '+']
-let digit_sequence = digit+
-let floating_suffix = ['f' 'l' 'F' 'L']
+let sign = [%sedlex.regexp? '-' | '+']
+let digit_sequence = [%sedlex.regexp? Plus digit ]
+let floating_suffix = [%sedlex.regexp? Chars "flFL"]
 
 let fractional_constant =
-    digit_sequence? '.' digit_sequence
-  | digit_sequence '.'
+  [%sedlex.regexp?
+      ( (Opt digit_sequence, '.', digit_sequence)
+      | (digit_sequence, '.')
+      )]
 let exponent_part =
-    ['e' 'E'] sign? digit_sequence
+  [%sedlex.regexp?  Chars "eE", Opt sign, digit_sequence]
 let decimal_floating_constant =
-    fractional_constant exponent_part? floating_suffix?
-  | digit_sequence exponent_part floating_suffix?
+  [%sedlex.regexp?
+      ( (fractional_constant, Opt exponent_part, Opt floating_suffix)
+      | digit_sequence, exponent_part, Opt floating_suffix
+      )]
 
-let hexadecimal_digit_sequence = hexadecimal_digit+
+let hexadecimal_digit_sequence = [%sedlex.regexp? Plus hexadecimal_digit]
 let hexadecimal_fractional_constant =
-    hexadecimal_digit_sequence? '.' hexadecimal_digit_sequence
-  | hexadecimal_digit_sequence '.'
+  [%sedlex.regexp?
+      ( (Opt hexadecimal_digit_sequence, '.', hexadecimal_digit_sequence)
+      | (hexadecimal_digit_sequence, '.')
+      )]
 let binary_exponent_part =
-    ['p' 'P'] sign? digit_sequence
+  [%sedlex.regexp? Chars "pP", Opt sign, digit_sequence]
 let hexadecimal_floating_constant =
-    hexadecimal_prefix hexadecimal_fractional_constant
-        binary_exponent_part floating_suffix?
-  | hexadecimal_prefix hexadecimal_digit_sequence
-        binary_exponent_part floating_suffix?
+  [%sedlex.regexp?
+      ( (hexadecimal_prefix, hexadecimal_fractional_constant,
+         binary_exponent_part, Opt floating_suffix)
+      | (hexadecimal_prefix, hexadecimal_digit_sequence,
+         binary_exponent_part, Opt floating_suffix)
+      )]
 
 (* Preprocessing numbers *)
+let preprocessing_exponent = [%sedlex.regexp? Chars "eEpP"]
 let preprocessing_number =
-  '.'? ['0'-'9']
-  (['0'-'9' 'A'-'Z' 'a'-'z' '_' '.'] | ['e' 'E' 'p' 'P']['+' '-'])*
+  [%sedlex.regexp?
+      Opt '.', digit, Star (digit_or_nondigit | (preprocessing_exponent, sign))
+  ]
 
 (* Character and string constants *)
 let simple_escape_sequence =
-  '\\' ['\''  '\"'  '?'  '\\'  'a'  'b'  'f'  'n'  'r'  't'  'v']
+  [%sedlex.regexp? '\\', Chars "'.\"?\\abfnrtv"]
 let octal_escape_sequence =
-  '\\' (octal_digit
-         | octal_digit octal_digit
-         | octal_digit octal_digit octal_digit)
-let hexadecimal_escape_sequence = "\\x" hexadecimal_digit+
+  [%sedlex.regexp?
+      '\\', (octal_digit | Rep(octal_digit, 2) | Rep(octal_digit, 3))]
+let hexadecimal_escape_sequence = 
+  [%sedlex.regexp? "\\x", Plus hexadecimal_digit]
 let escape_sequence =
-    simple_escape_sequence
-  | octal_escape_sequence
-  | hexadecimal_escape_sequence
-  | universal_character_name
+  [%sedlex.regexp?
+      ( simple_escape_sequence
+      | octal_escape_sequence
+      | hexadecimal_escape_sequence
+      | universal_character_name
+      )]
 
-rule initial = parse
-  | whitespace_char_no_newline+   { initial lexbuf }
-  | '\n'                          { new_line lexbuf; initial_linebegin lexbuf }
-  | "/*"                          { multiline_comment lexbuf; initial lexbuf }
-  | "//"                          { singleline_comment lexbuf; initial_linebegin lexbuf }
-  | integer_constant              { CONSTANT }
-  | decimal_floating_constant     { CONSTANT }
-  | hexadecimal_floating_constant { CONSTANT }
-  | preprocessing_number          { failwith "These characters form a preprocessor number, but not a constant" }
-  | (['L' 'u' 'U']|"") "'"        { char lexbuf; char_literal_end lexbuf; CONSTANT }
-  | (['L' 'u' 'U']|""|"u8") "\""  { string_literal lexbuf; STRING_LITERAL }
-  | "..."                         { ELLIPSIS }
-  | "+="                          { ADD_ASSIGN }
-  | "-="                          { SUB_ASSIGN }
-  | "*="                          { MUL_ASSIGN }
-  | "/="                          { DIV_ASSIGN }
-  | "%="                          { MOD_ASSIGN }
-  | "|="                          { OR_ASSIGN }
-  | "&="                          { AND_ASSIGN }
-  | "^="                          { XOR_ASSIGN }
-  | "<<="                         { LEFT_ASSIGN }
-  | ">>="                         { RIGHT_ASSIGN }
-  | "<<"                          { LEFT }
-  | ">>"                          { RIGHT }
-  | "=="                          { EQEQ }
-  | "!="                          { NEQ }
-  | "<="                          { LEQ }
-  | ">="                          { GEQ }
-  | "="                           { EQ }
-  | "<"                           { LT }
-  | ">"                           { GT }
-  | "++"                          { INC }
-  | "--"                          { DEC }
-  | "->"                          { PTR }
-  | "+"                           { PLUS }
-  | "-"                           { MINUS }
-  | "*"                           { STAR }
-  | "/"                           { SLASH }
-  | "%"                           { PERCENT }
-  | "!"                           { BANG }
-  | "&&"                          { ANDAND }
-  | "||"                          { BARBAR }
-  | "&"                           { AND }
-  | "|"                           { BAR }
-  | "^"                           { HAT }
-  | "?"                           { QUESTION }
-  | ":"                           { COLON }
-  | "~"                           { TILDE }
-  | "{"|"<%"                      { LBRACE }
-  | "}"|"%>"                      { RBRACE }
-  | "["|"<:"                      { LBRACK }
-  | "]"|":>"                      { RBRACK }
-  | "("                           { LPAREN }
-  | ")"                           { RPAREN }
-  | ";"                           { SEMICOLON }
-  | ","                           { COMMA }
-  | "."                           { DOT }
-  | "_Alignas"                    { ALIGNAS }
-  | "_Alignof"                    { ALIGNOF }
-  | "_Atomic"                     { ATOMIC }
-  | "_Bool"                       { BOOL }
-  | "_Complex"                    { COMPLEX }
-  | "_Generic"                    { GENERIC }
-  | "_Imaginary"                  { IMAGINARY }
-  | "_Noreturn"                   { NORETURN }
-  | "_Static_assert"              { STATIC_ASSERT }
-  | "_Thread_local"               { THREAD_LOCAL }
-  | "auto"                        { AUTO }
-  | "break"                       { BREAK }
-  | "case"                        { CASE }
-  | "char"                        { CHAR }
-  | "const"                       { CONST }
-  | "continue"                    { CONTINUE }
-  | "default"                     { DEFAULT }
-  | "do"                          { DO }
-  | "double"                      { DOUBLE }
-  | "else"                        { ELSE }
-  | "enum"                        { ENUM }
-  | "extern"                      { EXTERN }
-  | "float"                       { FLOAT }
-  | "for"                         { FOR }
-  | "goto"                        { GOTO }
-  | "if"                          { IF }
-  | "inline"                      { INLINE }
-  | "int"                         { INT }
-  | "long"                        { LONG }
-  | "register"                    { REGISTER }
-  | "restrict"                    { RESTRICT }
-  | "return"                      { RETURN }
-  | "short"                       { SHORT }
-  | "signed"                      { SIGNED }
-  | "sizeof"                      { SIZEOF }
-  | "static"                      { STATIC }
-  | "struct"                      { STRUCT }
-  | "switch"                      { SWITCH }
-  | "typedef"                     { TYPEDEF }
-  | "union"                       { UNION }
-  | "unsigned"                    { UNSIGNED }
-  | "void"                        { VOID }
-  | "volatile"                    { VOLATILE }
-  | "while"                       { WHILE }
-  | identifier as id              { NAME id }
-  | eof                           { EOF }
-  | _                             { failwith "Lexer error" }
+let c lexbuf = Sedlexing.Utf8.lexeme lexbuf
+let new_line _lexbuf = ()
 
-and initial_linebegin = parse
-  | '\n'                          { new_line lexbuf; initial_linebegin lexbuf }
-  | whitespace_char_no_newline    { initial_linebegin lexbuf }
-  | '#' | "%:"                    { hash lexbuf }
-  | ""                            { initial lexbuf }
+let rec initial lexbuf : Token.t =
+  match%sedlex lexbuf with
+  | Plus whitespace_char_no_newline   ->  initial lexbuf 
+  | '\n'                          ->  new_line lexbuf; initial_linebegin lexbuf 
+  | "/*"                          ->  multiline_comment lexbuf; initial lexbuf 
+  | "//"                          ->  singleline_comment lexbuf; initial_linebegin lexbuf 
+  | integer_constant              ->  CONSTANT 
+  | decimal_floating_constant     ->  CONSTANT 
+  | hexadecimal_floating_constant ->  CONSTANT 
+  | preprocessing_number          ->  failwith "These characters form a preprocessor number, but not a constant" 
+  | (Chars "LuU" | ""), "'"       ->  char lexbuf; char_literal_end lexbuf; CONSTANT 
+  | (Chars "LuU" | "" | "u8"), "\"" ->  string_literal lexbuf; CONSTANT
+  | "..."                         ->  ELLIPSIS 
+  | "+="                          ->  ADD_ASSIGN 
+  | "-="                          ->  SUB_ASSIGN 
+  | "*="                          ->  MUL_ASSIGN 
+  | "/="                          ->  DIV_ASSIGN 
+  | "%="                          ->  MOD_ASSIGN 
+  | "|="                          ->  OR_ASSIGN 
+  | "&="                          ->  AND_ASSIGN 
+  | "^="                          ->  XOR_ASSIGN 
+  | "<<="                         ->  LEFT_ASSIGN 
+  | ">>="                         ->  RIGHT_ASSIGN 
+  | "<<"                          ->  LEFT 
+  | ">>"                          ->  RIGHT 
+  | "=="                          ->  EQEQ 
+  | "!="                          ->  NEQ 
+  | "<="                          ->  LEQ 
+  | ">="                          ->  GEQ 
+  | "="                           ->  EQ 
+  | "<"                           ->  LT 
+  | ">"                           ->  GT 
+  | "++"                          ->  INC 
+  | "--"                          ->  DEC 
+  | "->"                          ->  PTR 
+  | "+"                           ->  PLUS 
+  | "-"                           ->  MINUS 
+  | "*"                           ->  STAR 
+  | "/"                           ->  SLASH 
+  | "%"                           ->  PERCENT 
+  | "!"                           ->  BANG 
+  | "&&"                          ->  ANDAND 
+  | "||"                          ->  BARBAR 
+  | "&"                           ->  AND 
+  | "|"                           ->  BAR 
+  | "^"                           ->  HAT 
+  | "?"                           ->  QUESTION 
+  | ":"                           ->  COLON 
+  | "~"                           ->  TILDE 
+  | "-> "|"<%"                    ->  LBRACE 
+  | "}"|"%>"                      ->  RBRACE 
+  | "["|"<:"                      ->  LBRACK 
+  | "]"|":>"                      ->  RBRACK 
+  | "("                           ->  LPAREN 
+  | ")"                           ->  RPAREN 
+  | ";"                           ->  SEMICOLON 
+  | ","                           ->  COMMA 
+  | "."                           ->  DOT 
+  | "_Alignas"                    ->  ALIGNAS 
+  | "_Alignof"                    ->  ALIGNOF 
+  | "_Atomic"                     ->  ATOMIC 
+  | "_Bool"                       ->  BOOL 
+  | "_Complex"                    ->  COMPLEX 
+  | "_Generic"                    ->  GENERIC 
+  | "_Imaginary"                  ->  IMAGINARY 
+  | "_Noreturn"                   ->  NORETURN 
+  | "_Static_assert"              ->  STATIC_ASSERT 
+  | "_Thread_local"               ->  THREAD_LOCAL 
+  | "auto"                        ->  AUTO 
+  | "break"                       ->  BREAK 
+  | "case"                        ->  CASE 
+  | "char"                        ->  CHAR 
+  | "const"                       ->  CONST 
+  | "continue"                    ->  CONTINUE 
+  | "default"                     ->  DEFAULT 
+  | "do"                          ->  DO 
+  | "double"                      ->  DOUBLE 
+  | "else"                        ->  ELSE 
+  | "enum"                        ->  ENUM 
+  | "extern"                      ->  EXTERN 
+  | "float"                       ->  FLOAT 
+  | "for"                         ->  FOR 
+  | "goto"                        ->  GOTO 
+  | "if"                          ->  IF 
+  | "inline"                      ->  INLINE 
+  | "int"                         ->  INT 
+  | "long"                        ->  LONG 
+  | "register"                    ->  REGISTER 
+  | "restrict"                    ->  RESTRICT 
+  | "return"                      ->  RETURN 
+  | "short"                       ->  SHORT 
+  | "signed"                      ->  SIGNED 
+  | "sizeof"                      ->  SIZEOF 
+  | "static"                      ->  STATIC 
+  | "struct"                      ->  STRUCT 
+  | "switch"                      ->  SWITCH 
+  | "typedef"                     ->  TYPEDEF 
+  | "union"                       ->  UNION 
+  | "unsigned"                    ->  UNSIGNED 
+  | "void"                        ->  VOID 
+  | "volatile"                    ->  VOLATILE 
+  | "while"                       ->  WHILE 
+  | identifier                    ->  NAME (c lexbuf)
+  | eof                           ->  EOF 
+  | _                             ->  failwith "Lexer error" 
+  
+and initial_linebegin lexbuf =
+  match%sedlex lexbuf with
+  | '\n'                          ->  new_line lexbuf; initial_linebegin lexbuf 
+  | whitespace_char_no_newline    ->  initial_linebegin lexbuf 
+  | '#' | "%:"                    ->  hash lexbuf 
+  | ""                            ->  initial lexbuf 
+  | _                             ->  failwith "Lexer error" 
 
-and char = parse
-  | simple_escape_sequence        { }
-  | octal_escape_sequence         { }
-  | hexadecimal_escape_sequence   { }
-  | universal_character_name      { }
-  | '\\' _                        { failwith "incorrect escape sequence" }
-  | _                             { }
+and char lexbuf =
+  match%sedlex lexbuf with
+  | simple_escape_sequence        -> ()
+  | octal_escape_sequence         -> ()
+  | hexadecimal_escape_sequence   -> () 
+  | universal_character_name      -> ()
+  | '\\'                          -> failwith "incorrect escape sequence" 
+  | _                             -> () 
 
-and char_literal_end = parse
-  | '\''       { }
-  | '\n' | eof { failwith "missing terminating \"'\" character" }
-  | ""         { char lexbuf; char_literal_end lexbuf }
+and char_literal_end lexbuf =
+  match%sedlex lexbuf with
+  | '\''       ->  ()
+  | '\n' | eof ->  failwith "missing terminating \"'\" character" 
+  | ""         ->  char lexbuf; char_literal_end lexbuf 
+  | _          ->  failwith "Lexer error" 
 
-and string_literal = parse
-  | '\"'       { }
-  | '\n' | eof { failwith "missing terminating '\"' character" }
-  | ""         { char lexbuf; string_literal lexbuf }
+and string_literal lexbuf =
+  match%sedlex lexbuf with
+  | '\"'       ->  () 
+  | '\n' | eof ->  failwith "missing terminating '\"' character" 
+  | ""         ->  char lexbuf; string_literal lexbuf 
+  | _          ->  failwith "Lexer error" 
 
 (* We assume gcc -E syntax but try to tolerate variations. *)
-and hash = parse
-  | whitespace_char_no_newline+ digit* whitespace_char_no_newline*
-    "\"" [^ '\n' '\"']* "\"" [^ '\n']* '\n'
-  | whitespace_char_no_newline* "pragma"
-    whitespace_char_no_newline+ [^ '\n']* '\n'
-      { new_line lexbuf; initial_linebegin lexbuf }
-  | [^ '\n']* eof
-      { failwith "unexpected end of file" }
+and hash lexbuf =
+  match%sedlex lexbuf with
+  | (Plus whitespace_char_no_newline, Star digit, Star whitespace_char_no_newline,
+     "\"", Star (Compl (Chars "\n,\"")), "\"", Star (Compl '\n'), '\n'
+    )
+  | Star whitespace_char_no_newline, "pragma", Plus whitespace_char_no_newline,
+    Star (Compl '\n'), '\n'
+      ->  new_line lexbuf; initial_linebegin lexbuf 
+  | Compl '\n', eof
+      ->  failwith "unexpected end of file" 
   | _
-      { failwith "Lexer error" }
+      ->  failwith "Lexer error" 
 
 (* Multi-line comment terminated by "*/" *)
-and multiline_comment = parse
-  | "*/"   { () }
-  | eof    { failwith "unterminated comment" }
-  | '\n'   { new_line lexbuf; multiline_comment lexbuf }
-  | _      { multiline_comment lexbuf }
+and multiline_comment lexbuf =
+  match%sedlex lexbuf with
+  | "*/"   ->  () 
+  | eof    ->  failwith "unterminated comment" 
+  | '\n'   ->  new_line lexbuf; multiline_comment lexbuf 
+  | _      ->  multiline_comment lexbuf 
 
 (* Single-line comment terminated by a newline *)
-and singleline_comment = parse
-  | '\n'   { new_line lexbuf }
-  | eof    { () }
-  | _      { singleline_comment lexbuf }
+and singleline_comment lexbuf =
+  match%sedlex lexbuf with
+  | '\n'   ->  new_line lexbuf 
+  | eof    ->  () 
+  | _      ->  singleline_comment lexbuf 
 
+(*
 {
 
   (* This lexer chooses between [inital] or [initial_linebegin],
@@ -355,3 +375,4 @@ and singleline_comment = parse
               token
 
 }
+   *)
