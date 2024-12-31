@@ -1,0 +1,6 @@
+(library
+  (name c11lexer)
+  (public_name c11parser_ng.lexer)
+  (libraries sedlex)
+  (preprocess (pps sedlex.ppx))
+  )
