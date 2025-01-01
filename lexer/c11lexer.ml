@@ -29,6 +29,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 *)
 
 module Token = Token
+module Literal = Literal
 
 (* Identifiers *)
 let digit = [%sedlex.regexp? '0' .. '9']

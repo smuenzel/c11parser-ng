@@ -1,6 +1,8 @@
 
 type 'a with_pos = start:Lexing.position -> end_:Lexing.position -> 'a
 
+module Literal = C11lexer.Literal
+
 module type S = sig
 
   type 'a located
@@ -74,6 +76,16 @@ module type S = sig
     val typedef_name : Typedef_name.t -> t
   end
 
+  module Constant : sig
+    type t
+
+    val char : Literal.Char.t -> t
+    val string : Literal.String.t -> t
+    val integer : string -> t
+    val decimal_floating : string -> t
+    val hexadecimal_floating : string -> t
+  end
+
   module rec Generic_association : sig
     type t
 
@@ -99,6 +111,8 @@ module type S = sig
     val dot : (t' * General_identifier.t) -> t
     val arrow : (t' * General_identifier.t) -> t
     val var : Var_name.t -> t
-    val constant : string -> t
+    val constant : Constant.t -> t
+
+    val generic : unit -> t
   end
 end

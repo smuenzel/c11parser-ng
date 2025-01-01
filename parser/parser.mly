@@ -38,9 +38,9 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 %token<string> NAME
 %token VARIABLE TYPE
-%token STRING_LITERAL
+%token<C11lexer.Literal.String.t> STRING_LITERAL
 
-%token CONSTANT_CHAR
+%token<C11lexer.Literal.Char.t> CONSTANT_CHAR
 %token<string> CONSTANT_INTEGER
 %token<string> CONSTANT_DECIMAL_FLOATING
 %token<string> CONSTANT_HEXADECIMAL_FLOATING
@@ -278,30 +278,31 @@ declarator_typedefname:
     { Context.declare_typedefname (Declarator.identifier d); d }
 
 (* Merge source-level string literals. *)
-string_literal:
-| STRING_LITERAL
-| string_literal STRING_LITERAL
-    {}
+let string_literal :=
+| ~=STRING_LITERAL;
+    <>
+| a=string_literal; b=STRING_LITERAL;
+    { a @ b }
 
 (* End of the helpers, and beginning of the grammar proper: *)
 
 let primary_expression :=
 | ~=var_name;
   < Gen.Expr.var >
-| ~=CONSTANT_CHAR;
-  < Gen.Expr.constant >
-| ~=CONSTANT_INTEGER;
-{}
-| ~=CONSTANT_DECIMAL_FLOATING;
-{}
-| ~=CONSTANT_HEXADECIMAL_FLOATING;
-{}
-| string_literal;
-  {}
+| c=CONSTANT_CHAR;
+  { Gen.Expr.constant (Gen.Constant.char c) }
+| c=CONSTANT_INTEGER;
+{ Gen.Expr.constant (Gen.Constant.integer c) }
+| c=CONSTANT_DECIMAL_FLOATING;
+{ Gen.Expr.constant (Gen.Constant.decimal_floating c) }
+| c=CONSTANT_HEXADECIMAL_FLOATING;
+{ Gen.Expr.constant (Gen.Constant.hexadecimal_floating c) }
+| x=string_literal;
+  { Gen.Expr.constant (Gen.Constant.string x) }
 | "("; ~=expression; ")";
   <>
 | generic_selection;
-    {}
+    { Gen.Expr.generic () }
 
 generic_selection:
 | "_Generic" "(" assignment_expression "," generic_assoc_list ")"
