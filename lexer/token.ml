@@ -4,8 +4,11 @@ type t =
   | NAME of string
   | VARIABLE
   | TYPE
-  | STRING_LITERAL
-  | CONSTANT
+  | STRING_LITERAL of Literal.String.t
+  | CONSTANT_CHAR of Literal.Char.t
+  | CONSTANT_INTEGER of string
+  | CONSTANT_DECIMAL_FLOATING of string
+  | CONSTANT_HEXADECIMAL_FLOATING of string
   | ALIGNAS
   | ALIGNOF
   | ATOMIC

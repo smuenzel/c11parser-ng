@@ -34,10 +34,16 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
    modify the grammar, you should check that this is still the case. *)
 
 %parameter<Context : Context.Packed>
+%parameter<Gen : Astgen_intf.S>
 
 %token<string> NAME
 %token VARIABLE TYPE
-%token CONSTANT STRING_LITERAL
+%token STRING_LITERAL
+
+%token CONSTANT_CHAR
+%token<string> CONSTANT_INTEGER
+%token<string> CONSTANT_DECIMAL_FLOATING
+%token<string> CONSTANT_HEXADECIMAL_FLOATING
 
 %token ALIGNAS "_Alignas"
 %token ALIGNOF "_Alignof"
@@ -138,8 +144,11 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 %token EOF
 
 %type<Context.snapshot> save_context parameter_type_list function_definition1
-%type<string> typedef_name var_name general_identifier enumeration_constant
+%type<string> enumeration_constant
 %type<Context.snapshot Declarator.t> declarator direct_declarator
+%type<Gen.Expr.t> unary_expression cast_expression postfix_expression additive_expression
+%type<Gen.Expr.t> multiplicative_expression shift_expression
+%type<Gen.Expr.t> relational_expression equality_expression primary_expression
 
 (* There is a reduce/reduce conflict in the grammar. It corresponds to the
    conflict in the second declaration in the following snippet:
@@ -165,6 +174,9 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 %%
 
 (* Helpers *)
+
+%public %inline located(X):
+  x=X { Gen.locate ~start:$startpos(x) ~end_:$endpos(x) }
 
 (* [option(X)] represents a choice between nothing and [X].
    [ioption(X)] is the same thing, but is inlined at its use site,
@@ -224,13 +236,13 @@ list_eq1_ge1(A, B, C):
    or [VARIABLE], tells what kind of name this is. The classification is
    performed only when the second token is demanded by the parser. *)
 
-typedef_name:
-| i = NAME TYPE
-    { i }
+let typedef_name :=
+| ~=NAME; TYPE;
+    < Gen.Typedef_name.of_string >
 
-var_name:
-| i = NAME VARIABLE
-    { i }
+let var_name :=
+| ~=NAME; VARIABLE;
+    < Gen.Var_name.of_string >
 
 (* [typedef_name_spec] must be declared before [general_identifier], so that the
    reduce/reduce conflict is solved the right way. *)
@@ -239,10 +251,11 @@ typedef_name_spec:
 | typedef_name
     {}
 
-general_identifier:
-| i = typedef_name
-| i = var_name
-    { i }
+let general_identifier :=
+| ~=typedef_name;
+  < Gen.General_identifier.typedef_name >
+| ~=var_name;
+  < Gen.General_identifier.var_name >
 
 save_context:
 | (* empty *)
@@ -272,12 +285,22 @@ string_literal:
 
 (* End of the helpers, and beginning of the grammar proper: *)
 
-primary_expression:
-| var_name
-| CONSTANT
-| string_literal
-| "(" expression ")"
-| generic_selection
+let primary_expression :=
+| ~=var_name;
+  < Gen.Expr.var >
+| ~=CONSTANT_CHAR;
+  < Gen.Expr.constant >
+| ~=CONSTANT_INTEGER;
+{}
+| ~=CONSTANT_DECIMAL_FLOATING;
+{}
+| ~=CONSTANT_HEXADECIMAL_FLOATING;
+{}
+| string_literal;
+  {}
+| "("; ~=expression; ")";
+  <>
+| generic_selection;
     {}
 
 generic_selection:
@@ -294,15 +317,22 @@ generic_association:
 | "default" ":" assignment_expression
     {}
 
-postfix_expression:
-| primary_expression
-| postfix_expression "[" expression "]"
-| postfix_expression "(" argument_expression_list? ")"
-| postfix_expression "." general_identifier
-| postfix_expression "->" general_identifier
-| postfix_expression "++"
-| postfix_expression "--"
-| "(" type_name ")" "{" initializer_list ","? "}"
+let postfix_expression :=
+| ~=primary_expression;
+  <>
+| postfix_expression; "["; expression; "]";
+  {}
+| postfix_expression; "(" ;argument_expression_list?; ")";
+  {}
+| ~=located(postfix_expression); "."; ~=general_identifier;
+  < Gen.Expr.dot >
+| ~=located(postfix_expression); "->"; ~=general_identifier;
+  < Gen.Expr.arrow >
+| x=located(postfix_expression); "++";
+  { Gen.Expr.unary (Gen.Unary_operator.postincrement, x) }
+| postfix_expression; "--";
+  { Gen.Expr.unary (Gen.Unary_operator.postdecrement, x) }
+| "("; type_name; ")"; "{"; initializer_list; ","?; "}";
     {}
 
 argument_expression_list:
@@ -310,69 +340,88 @@ argument_expression_list:
 | argument_expression_list "," assignment_expression
     {}
 
-unary_expression:
-| postfix_expression
-| "++" unary_expression
-| "--" unary_expression
-| unary_operator cast_expression
-| "sizeof" unary_expression
-| "sizeof" "(" type_name ")"
-| "_Alignof" "(" type_name ")"
-    {}
+let unary_expression :=
+| ~=postfix_expression;
+<>
+| "++"; e=located(unary_expression);
+{ Gen.Expr.unary (Gen.Unary_operator.preincrement, e) }
+| "--"; e=located(unary_expression);
+{ Gen.Expr.unary (Gen.Unary_operator.predecrement, e) }
+| ~=unary_operator; ~=located(cast_expression);
+< Gen.Expr.unary >
+| "sizeof"; e=located(unary_expression);
+{ Gen.Expr.unary (Gen.Unary_operator.sizeof, e) }
+| "sizeof"; "("; ~=type_name; ")";
+< Gen.Expr.sizeof >
+| "_Alignof"; "("; ~=type_name; ")";
+< Gen.Expr.alignof >
 
 unary_operator:
-| "&"
-| "*"
-| "+"
-| "-"
-| "~"
-| "!"
-    {}
+| "&" { Gen.Unary_operator.address_of }
+| "*" { Gen.Unary_operator.dereference }
+| "+" { Gen.Unary_operator.plus }
+| "-" { Gen.Unary_operator.minus }
+| "~" { Gen.Unary_operator.bitwise_not }
+| "!" { Gen.Unary_operator.logical_not }
 
-cast_expression:
-| unary_expression
-| "(" type_name ")" cast_expression
-    {}
+let cast_expression :=
+| ~=unary_expression;
+<>
+| "("; ~=type_name; ")"; ~=located(cast_expression);
+< Gen.Expr.cast >
 
 multiplicative_operator:
-  "*" | "/" | "%" {}
+| "*" { Gen.Multiplicative_operator.multiply }
+| "/" { Gen.Multiplicative_operator.divide }
+| "%" { Gen.Multiplicative_operator.modulo }
 
-multiplicative_expression:
-| cast_expression
-| multiplicative_expression multiplicative_operator cast_expression
-    {}
+let multiplicative_expression :=
+| ~=cast_expression;
+< >
+| ~=located(multiplicative_expression); ~=multiplicative_operator; ~=located(cast_expression);
+< Gen.Expr.multiplicative >
 
 additive_operator:
-  "+" | "-" {}
+| "+" { Gen.Additive_operator.plus }
+| "-" { Gen.Additive_operator.minus }
 
-additive_expression:
-| multiplicative_expression
-| additive_expression additive_operator multiplicative_expression
-    {}
+let additive_expression :=
+| ~=multiplicative_expression;
+  <>
+| ~=located(additive_expression); ~=additive_operator; ~=located(multiplicative_expression);
+  < Gen.Expr.additive >
 
 shift_operator:
-  "<<" | ">>" {}
+| "<<" { Gen.Shift_operator.left }
+| ">>" { Gen.Shift_operator.right }
 
-shift_expression:
-| additive_expression
-| shift_expression shift_operator additive_expression
-    {}
+let shift_expression :=
+| ~=additive_expression;
+ <>
+| ~=located(shift_expression); ~=shift_operator; ~=located(additive_expression);
+    < Gen.Expr.shift >
 
 relational_operator:
-  "<" | ">" | "<=" | ">=" {}
+| "<" { Gen.Relational_operator.less }
+| ">" { Gen.Relational_operator.greater }
+| "<=" { Gen.Relational_operator.less_equal }
+| ">=" { Gen.Relational_operator.greater_equal }
 
-relational_expression:
-| shift_expression
-| relational_expression relational_operator shift_expression
-    {}
+let relational_expression :=
+| ~=shift_expression;
+    <>
+| ~=located(relational_expression); ~=relational_operator; ~=located(shift_expression);
+    < Gen.Expr.relational >
 
 equality_operator:
-  "==" | "!=" {}
+| "==" { Gen.Equality_operator.equal }
+| "!=" { Gen.Equality_operator.not_equal }
 
-equality_expression:
-| relational_expression
-| equality_expression equality_operator relational_expression
-    {}
+let equality_expression :=
+| ~=relational_expression; 
+  <>
+| ~=located(equality_expression); ~=equality_operator; ~=located(relational_expression);
+    < Gen.Expr.equality >
 
 and_expression:
 | equality_expression

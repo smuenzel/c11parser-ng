@@ -142,18 +142,42 @@ let escape_sequence =
 let c lexbuf = Sedlexing.Utf8.lexeme lexbuf
 let new_line _lexbuf = ()
 
+let literal_char_prefix lexbuf =
+  match Sedlexing.Latin1.lexeme_char lexbuf 0 with
+  | 'L' -> `Wide
+  | 'u' -> `U16
+  | 'U' -> `U32
+  | '\'' -> `Plain
+  | _ -> failwith "invalid literal character prefix"
+
+let literal_string_prefix lexbuf =
+  match Sedlexing.Utf8.sub_lexeme lexbuf 0 2 with
+  | "L\"" -> `Wide
+  | "u\"" -> `U16
+  | "U\"" -> `U32
+  | "u8" -> `Utf8
+  | "\"" -> `Plain
+  | _ -> failwith "invalid literal string prefix"
+
 let rec initial lexbuf : Token.t =
   match%sedlex lexbuf with
   | Plus whitespace_char_no_newline   ->  initial lexbuf 
   | '\n'                          ->  new_line lexbuf; initial_linebegin lexbuf 
   | "/*"                          ->  multiline_comment lexbuf; initial lexbuf 
   | "//"                          ->  singleline_comment lexbuf; initial_linebegin lexbuf 
-  | integer_constant              ->  CONSTANT 
-  | decimal_floating_constant     ->  CONSTANT 
-  | hexadecimal_floating_constant ->  CONSTANT 
+  | integer_constant              ->  CONSTANT_INTEGER (c lexbuf)
+  | decimal_floating_constant     ->  CONSTANT_DECIMAL_FLOATING (c lexbuf)
+  | hexadecimal_floating_constant ->  CONSTANT_HEXADECIMAL_FLOATING (c lexbuf)
   | preprocessing_number          ->  failwith "These characters form a preprocessor number, but not a constant" 
-  | (Chars "LuU" | ""), "'"       ->  char lexbuf; char_literal_end lexbuf; CONSTANT 
-  | (Chars "LuU" | "" | "u8"), "\"" ->  string_literal lexbuf; STRING_LITERAL
+  | (Chars "LuU" | ""), "'"       ->
+    let kind = literal_char_prefix lexbuf in
+    let element = char lexbuf in
+    let excess_elements = char_literal_end lexbuf in
+    CONSTANT_CHAR { kind; value = element :: excess_elements }
+  | (Chars "LuU" | "" | "u8"), "\"" ->
+    let kind = literal_string_prefix lexbuf in
+    let value = string_literal lexbuf in
+    STRING_LITERAL [ { kind; value } ]
   | "..."                         ->  ELLIPSIS 
   | "+="                          ->  ADD_ASSIGN 
   | "-="                          ->  SUB_ASSIGN 
@@ -256,27 +280,37 @@ and initial_linebegin lexbuf =
   | ""                            ->  initial lexbuf 
   | _                             ->  failwith "Lexer error" 
 
-and char lexbuf =
+and char lexbuf : Literal.Char.Element.t =
   match%sedlex lexbuf with
-  | simple_escape_sequence        -> ()
-  | octal_escape_sequence         -> ()
-  | hexadecimal_escape_sequence   -> () 
-  | universal_character_name      -> ()
+  | simple_escape_sequence        ->
+    Literal.Char.Element.Escape (Sedlexing.Latin1.lexeme_char lexbuf 1)
+  | octal_escape_sequence         ->
+    Literal.Char.Element.Octal (c lexbuf)
+  | hexadecimal_escape_sequence   ->
+    Literal.Char.Element.Hex (c lexbuf)
+  | universal_character_name      ->
+    Literal.Char.Element.Universal (c lexbuf)
   | '\\'                          -> failwith "incorrect escape sequence" 
-  | _                             -> () 
+  | Compl (Chars "")              ->
+    Literal.Char.Element.Plain (Sedlexing.lexeme_char lexbuf 0)
+  | _                             ->  failwith "Lexer error" 
 
-and char_literal_end lexbuf =
+and [@ocaml.tail_mod_cons] char_literal_end lexbuf =
   match%sedlex lexbuf with
-  | '\''       ->  ()
+  | '\''       ->  []
   | '\n' | eof ->  failwith "missing terminating \"'\" character" 
-  | ""         ->  char lexbuf; char_literal_end lexbuf 
+  | ""         ->
+    let c = char lexbuf in
+    c :: char_literal_end lexbuf 
   | _          ->  failwith "Lexer error" 
 
-and string_literal lexbuf =
+and [@ocaml.tail_mod_cons] string_literal lexbuf : Literal.Char.Element.t list =
   match%sedlex lexbuf with
-  | '\"'       ->  () 
+  | '\"'       ->  []
   | '\n' | eof ->  failwith "missing terminating '\"' character" 
-  | ""         ->  char lexbuf; string_literal lexbuf 
+  | ""         ->
+    let c = char lexbuf in 
+    c :: string_literal lexbuf 
   | _          ->  failwith "Lexer error" 
 
 (* We assume gcc -E syntax but try to tolerate variations. *)
