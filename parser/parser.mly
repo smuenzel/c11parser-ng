@@ -144,7 +144,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 %token EOF
 
 %type<Context.snapshot> save_context parameter_type_list function_definition1
-%type<string> enumeration_constant
 %type<Context.snapshot Declarator.t> declarator direct_declarator
 %type<Gen.Expr.t> unary_expression cast_expression postfix_expression additive_expression
 %type<Gen.Expr.t> multiplicative_expression shift_expression
@@ -176,7 +175,13 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 (* Helpers *)
 
 %public %inline located(X):
-  x=X { Gen.locate ~start:$startpos(x) ~end_:$endpos(x) }
+  x=X { Gen.locate ~start:$startpos(x) ~end_:$endpos(x) x }
+
+%inline as_typed(X):
+  x=X { snd x }
+
+%inline as_untyped(X):
+  x=X { fst x }
 
 (* [option(X)] represents a choice between nothing and [X].
    [ioption(X)] is the same thing, but is inlined at its use site,
@@ -185,8 +190,9 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 %inline ioption(X):
 | /* nothing */
-| X
-    {}
+    { None }
+| x=X
+    { Some x }
 
 option(X):
 | o = ioption(X)
@@ -194,17 +200,19 @@ option(X):
 
 (* By convention, [X*] is syntactic sugar for [list(X)]. *)
 
-list(X):
+let list(X) :=
 | /* nothing */
-| X list(X)
-    {}
+  { [] }
+| x=X; xs=list(X);
+    {x :: xs}
 
 (* A list of A's and B's that contains exactly one A: *)
 
-list_eq1(A, B):
-| A B*
-| B list_eq1(A, B)
-    {}
+let list_eq1(A, B) :=
+| a=A; b=B*;
+{ Util.List_eq1.Eq (a, b) }
+| b=B; rest=list_eq1(A, B);
+{ Util.List_eq1.Neq (b, rest) }
 
 (* A list of A's and B's that contains at least one A: *)
 
@@ -237,12 +245,12 @@ list_eq1_ge1(A, B, C):
    performed only when the second token is demanded by the parser. *)
 
 let typedef_name :=
-| ~=NAME; TYPE;
-    < Gen.Typedef_name.of_string >
+| name=NAME; TYPE;
+    { name, Gen.Typedef_name.of_string name }
 
 let var_name :=
-| ~=NAME; VARIABLE;
-    < Gen.Var_name.of_string >
+| name=NAME; VARIABLE;
+{ name, Gen.Var_name.of_string name }
 
 (* [typedef_name_spec] must be declared before [general_identifier], so that the
    reduce/reduce conflict is solved the right way. *)
@@ -252,10 +260,10 @@ typedef_name_spec:
     {}
 
 let general_identifier :=
-| ~=typedef_name;
-  < Gen.General_identifier.typedef_name >
-| ~=var_name;
-  < Gen.General_identifier.var_name >
+| n=typedef_name;
+  { (fst n), Gen.General_identifier.of_string (fst n) }
+| n=var_name;
+  { (fst n), Gen.General_identifier.of_string (fst n) }
 
 save_context:
 | (* empty *)
@@ -287,8 +295,8 @@ let string_literal :=
 (* End of the helpers, and beginning of the grammar proper: *)
 
 let primary_expression :=
-| ~=var_name;
-  < Gen.Expr.var >
+| n=var_name;
+  { Gen.Expr.var (snd n) }
 | c=CONSTANT_CHAR;
   { Gen.Expr.constant (Gen.Constant.char c) }
 | c=CONSTANT_INTEGER;
@@ -322,19 +330,19 @@ let postfix_expression :=
 | ~=primary_expression;
   <>
 | postfix_expression; "["; expression; "]";
-  {}
+  { failwith ""}
 | postfix_expression; "(" ;argument_expression_list?; ")";
-  {}
-| ~=located(postfix_expression); "."; ~=general_identifier;
+  { failwith ""}
+| ~=located(postfix_expression); "."; ~=as_typed(general_identifier);
   < Gen.Expr.dot >
-| ~=located(postfix_expression); "->"; ~=general_identifier;
+| ~=located(postfix_expression); "->"; ~=as_typed(general_identifier);
   < Gen.Expr.arrow >
 | x=located(postfix_expression); "++";
   { Gen.Expr.unary (Gen.Unary_operator.postincrement, x) }
-| postfix_expression; "--";
+| x=located(postfix_expression); "--";
   { Gen.Expr.unary (Gen.Unary_operator.postdecrement, x) }
 | "("; type_name; ")"; "{"; initializer_list; ","?; "}";
-    {}
+    { failwith ""}
 
 argument_expression_list:
 | assignment_expression
@@ -424,64 +432,63 @@ let equality_expression :=
 | ~=located(equality_expression); ~=equality_operator; ~=located(relational_expression);
     < Gen.Expr.equality >
 
-and_expression:
-| equality_expression
-| and_expression "&" equality_expression
-    {}
+let and_expression :=
+| ~=equality_expression; <>
+| a=located(and_expression); "&"; b=located(equality_expression);
+    { Gen.Expr.bitwise (a, Gen.Bitwise_operator.bitwise_and, b) }
 
-exclusive_or_expression:
-| and_expression
-| exclusive_or_expression "^" and_expression
-    {}
+let exclusive_or_expression :=
+| ~=and_expression; <>
+| a=located(exclusive_or_expression); "^"; b=located(and_expression);
+    { Gen.Expr.bitwise (a, Gen.Bitwise_operator.bitwise_xor, b) }
 
-inclusive_or_expression:
-| exclusive_or_expression
-| inclusive_or_expression "|" exclusive_or_expression
-    {}
+let inclusive_or_expression :=
+| ~=exclusive_or_expression; <>
+| a=located(inclusive_or_expression); "|"; b=located(exclusive_or_expression);
+    { Gen.Expr.bitwise (a, Gen.Bitwise_operator.bitwise_or, b) }
 
-logical_and_expression:
-| inclusive_or_expression
-| logical_and_expression "&&" inclusive_or_expression
-    {}
+let logical_and_expression :=
+| ~=inclusive_or_expression; <>
+| a=located(logical_and_expression); "&&"; b=located(inclusive_or_expression);
+    { Gen.Expr.logical (a, Gen.Logical_operator.logical_and, b) }
 
-logical_or_expression:
-| logical_and_expression
-| logical_or_expression "||" logical_and_expression
-    {}
+let logical_or_expression :=
+| ~=logical_and_expression; <>
+| a=located(logical_or_expression); "||"; b=located(logical_and_expression);
+    { Gen.Expr.logical (a, Gen.Logical_operator.logical_or, b) }
 
-conditional_expression:
-| logical_or_expression
-| logical_or_expression "?" expression ":" conditional_expression
-    {}
+let conditional_expression :=
+| ~=logical_or_expression; <>
+| ~=located(logical_or_expression); "?"; ~=located(expression); ":"; ~=located(conditional_expression);
+    < Gen.Expr.question >
 
-assignment_expression:
-| conditional_expression
-| unary_expression assignment_operator assignment_expression
-    {}
+let assignment_expression :=
+| ~=conditional_expression; <>
+| ~=located(unary_expression); ~=assignment_operator; ~=located(assignment_expression);
+    < Gen.Expr.assignment >
 
-assignment_operator:
-| "="
-| "*="
-| "/="
-| "%="
-| "+="
-| "-="
-| "<<="
-| ">>="
-| "&="
-| "^="
-| "|="
-    {}
+let assignment_operator :=
+| "="; { Gen.Assignment_operator.plain }
+| "*="; { Gen.Assignment_operator.multiplicative (Gen.Multiplicative_operator.multiply) }
+| "/="; { Gen.Assignment_operator.multiplicative (Gen.Multiplicative_operator.divide) }
+| "%="; { Gen.Assignment_operator.multiplicative (Gen.Multiplicative_operator.modulo) }
+| "+="; { Gen.Assignment_operator.additive (Gen.Additive_operator.plus) }
+| "-="; { Gen.Assignment_operator.additive (Gen.Additive_operator.minus) }
+| "<<="; { Gen.Assignment_operator.shift (Gen.Shift_operator.left) }
+| ">>="; { Gen.Assignment_operator.shift (Gen.Shift_operator.right) }
+| "&="; { Gen.Assignment_operator.bitwise (Gen.Bitwise_operator.bitwise_and) }
+| "^="; { Gen.Assignment_operator.bitwise (Gen.Bitwise_operator.bitwise_xor) }
+| "|="; { Gen.Assignment_operator.bitwise (Gen.Bitwise_operator.bitwise_or) }
 
-expression:
-| assignment_expression
-| expression "," assignment_expression
-    {}
+let expression :=
+| ~=assignment_expression; <>
+| ~=located(expression); ","; ~=located(assignment_expression);
+    < Gen.Expr.comma >
 
 
-constant_expression:
-| conditional_expression
-    {}
+let constant_expression :=
+| ~=conditional_expression;
+    <>
 
 (* We separate type declarations, which contain an occurrence of ["typedef"], and
    normal declarations, which do not. This makes it possible to distinguish /in
@@ -589,10 +596,9 @@ struct_or_union_specifier:
 | struct_or_union general_identifier
     {}
 
-struct_or_union:
-| "struct"
-| "union"
-    {}
+let struct_or_union :=
+| "struct"; { Gen.Struct_or_union.struct_ }
+| "union"; { Gen.Struct_or_union.union }
 
 struct_declaration_list:
 | struct_declaration
@@ -605,12 +611,18 @@ struct_declaration:
     {}
 
 
+let qualifier_or_alignment :=
+| type_qualifier;
+< Either.Left >
+| ~=alignment_specifier;
+< Either.Right >
+
 (* [specifier_qualifier_list] is as in the standard, except it also encodes the
    same constraint as [declaration_specifiers] (see above). *)
 
 specifier_qualifier_list:
-| list_eq1(type_specifier_unique,    type_qualifier | alignment_specifier {})
-| list_ge1(type_specifier_nonunique, type_qualifier | alignment_specifier {})
+| list_eq1(type_specifier_unique,    qualifier_or_alignment)
+| list_ge1(type_specifier_nonunique, qualifier_or_alignment)
     {}
 
 struct_declarator_list:
@@ -636,7 +648,7 @@ enumerator_list:
 enumerator:
 | i = enumeration_constant
 | i = enumeration_constant "=" constant_expression
-    { Context.declare_varname i }
+    { Context.declare_varname (fst i) }
 
 enumeration_constant:
 | i = general_identifier
@@ -647,21 +659,21 @@ atomic_type_specifier:
 | "_Atomic" ATOMIC_LPAREN type_name ")"
     {}
 
-type_qualifier:
-| "const"
-| "restrict"
-| "volatile"
-| "_Atomic"
-    {}
+let type_qualifier :=
+| "const"; { Gen.Type_qualifier.const }
+| "restrict"; { Gen.Type_qualifier.restrict }
+| "volatile"; { Gen.Type_qualifier.volatile }
+| "_Atomic"; { Gen.Type_qualifier.atomic }
 
 function_specifier:
   "inline" | "_Noreturn"
     {}
 
-alignment_specifier:
-| "_Alignas" "(" type_name ")"
-| "_Alignas" "(" constant_expression ")"
-    {}
+let alignment_specifier :=
+| "_Alignas"; "("; ~=type_name; ")";
+  < Gen.Alignment_specifier.alignas_type >
+| "_Alignas"; "("; ~=located(constant_expression); ")";
+    < Gen.Alignment_specifier.alignas_expression >
 
 declarator:
 | ioption(pointer) d = direct_declarator
@@ -674,7 +686,7 @@ declarator:
    avenues in parallel and some of them do require saving the context. *)
 
 direct_declarator:
-| i = general_identifier
+| i = as_untyped(general_identifier)
     { Declarator.identifier_declarator i }
 | "(" save_context d = declarator ")"
     { d }

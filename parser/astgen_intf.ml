@@ -7,7 +7,40 @@ module type S = sig
 
   type 'a located
 
-  val locate : ('a -> 'a) with_pos
+  val locate : ('a -> 'a located) with_pos
+
+  module Type_qualifier : sig
+    type t
+    val const : t
+    val restrict : t
+    val volatile : t
+    val atomic : t
+  end
+
+  module Type_specifier_nonunique : sig
+    type t
+    val char : t
+    val short : t
+    val int : t
+    val long : t
+    val float : t
+    val double : t
+    val signed : t
+    val unsigned : t
+    val complex : t
+  end
+
+  module Type_specifier_unique : sig
+    type t
+    val void : t
+    val bool : t
+  end
+
+  module Struct_or_union : sig
+    type t
+    val struct_ : t
+    val union : t
+  end
 
   module Equality_operator : sig
     type t
@@ -42,6 +75,28 @@ module type S = sig
     val modulo : t
   end
 
+  module Logical_operator : sig
+    type t
+    val logical_and : t
+    val logical_or : t
+  end
+
+  module Bitwise_operator : sig
+    type t
+    val bitwise_and : t
+    val bitwise_xor : t
+    val bitwise_or : t
+  end
+
+  module Assignment_operator : sig
+    type t
+    val plain : t
+    val bitwise : Bitwise_operator.t -> t
+    val multiplicative : Multiplicative_operator.t -> t
+    val additive : Additive_operator.t -> t
+    val shift : Shift_operator.t -> t
+  end
+
   module Unary_operator : sig
     type t
     val address_of : t
@@ -72,6 +127,7 @@ module type S = sig
   module General_identifier : sig
     type t
 
+    val of_string : string -> t
     val var_name : Var_name.t -> t
     val typedef_name : Typedef_name.t -> t
   end
@@ -104,7 +160,11 @@ module type S = sig
     val shift : Shift_operator.t binary
     val additive : Additive_operator.t binary
     val multiplicative : Multiplicative_operator.t binary
+    val logical : Logical_operator.t binary
+    val bitwise : Bitwise_operator.t binary
+    val assignment : Assignment_operator.t binary
     val unary : Unary_operator.t unary
+    val question : (t' * t' * t') -> t
     val cast : (unit * t') -> t
     val sizeof : unit -> t
     val alignof : unit -> t
@@ -114,5 +174,27 @@ module type S = sig
     val constant : Constant.t -> t
 
     val generic : unit -> t
+
+    val comma : t' * t' -> t
   end
+   
+  and Alignment_specifier : sig
+    type t
+    val alignas_type : unit -> t
+    val alignas_expression : Expr.t located -> t
+  end
+
+  and Specifier_qualifier_list : sig
+    type t
+
+    val unique : t
+
+  end
+
+  and Struct_declaration : sig
+    type t
+
+
+  end
+
 end
