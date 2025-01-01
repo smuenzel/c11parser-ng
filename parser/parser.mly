@@ -33,8 +33,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
    has 3 reduce/reduce conflicts on RPAREN, LPAREN, and LBRACK. If you
    modify the grammar, you should check that this is still the case. *)
 
-%parameter<Context : Context.Packed>
 %parameter<Gen : Astgen_intf.S>
+%parameter<Context : Context.Packed>
 
 %token<string> NAME
 %token VARIABLE TYPE
@@ -148,6 +148,9 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 %type<Gen.Expr.t> unary_expression cast_expression postfix_expression additive_expression
 %type<Gen.Expr.t> multiplicative_expression shift_expression
 %type<Gen.Expr.t> relational_expression equality_expression primary_expression
+%type<string*Gen.Typedef_name.t> typedef_name
+%type<string*Gen.Var_name.t> var_name
+%type<string*Gen.General_identifier.t> general_identifier
 
 (* There is a reduce/reduce conflict in the grammar. It corresponds to the
    conflict in the second declaration in the following snippet:
@@ -169,6 +172,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 %nonassoc ELSE
 
 %start<unit> translation_unit_file
+%start<Gen.Expr.t> single_expression
 
 %%
 
@@ -183,29 +187,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 %inline as_untyped(X):
   x=X { fst x }
 
-(* [option(X)] represents a choice between nothing and [X].
-   [ioption(X)] is the same thing, but is inlined at its use site,
-   which in some cases is necessary in order to avoid a conflict.
-   By convention, [X?] is syntactic sugar for [option(X)]. *)
-
-%inline ioption(X):
-| /* nothing */
-    { None }
-| x=X
-    { Some x }
-
-option(X):
-| o = ioption(X)
-    { o }
-
-(* By convention, [X*] is syntactic sugar for [list(X)]. *)
-
-let list(X) :=
-| /* nothing */
-  { [] }
-| x=X; xs=list(X);
-    {x :: xs}
-
 (* A list of A's and B's that contains exactly one A: *)
 
 let list_eq1(A, B) :=
@@ -216,28 +197,35 @@ let list_eq1(A, B) :=
 
 (* A list of A's and B's that contains at least one A: *)
 
-list_ge1(A, B):
-| A B*
-| A list_ge1(A, B)
-| B list_ge1(A, B)
-    {}
+let list_ge1(A, B) :=
+| a=A; b=B*;
+{ Util.List_ge1.Eq (a, b) }
+| a=A; rest=list_ge1(A, B);
+{ Util.List_ge1.A (a, rest) }
+| b=B; rest=list_ge1(A, B);
+{ Util.List_ge1.B (b, rest) }
 
 (* A list of A's, B's and C's that contains exactly one A and exactly one B: *)
 
-list_eq1_eq1(A, B, C):
-| A list_eq1(B, C)
-| B list_eq1(A, C)
-| C list_eq1_eq1(A, B, C)
-    {}
+let list_eq1_eq1(A, B, C) :=
+| a=A; rest=list_eq1(B, C);
+{ Util.List_eq1_eq1.A (a, rest) }
+| b=B; rest=list_eq1(A, C);
+{ Util.List_eq1_eq1.B (b, rest) }
+| c=C; rest=list_eq1_eq1(A, B, C);
+{ Util.List_eq1_eq1.C (c, rest) }
 
 (* A list of A's, B's and C's that contains exactly one A and at least one B: *)
 
-list_eq1_ge1(A, B, C):
-| A list_ge1(B, C)
-| B list_eq1(A, C)
-| B list_eq1_ge1(A, B, C)
-| C list_eq1_ge1(A, B, C)
-    {}
+let list_eq1_ge1(A, B, C) :=
+| a=A; rest=list_ge1(B, C);
+{ Util.List_eq1_ge1.A (a, rest) }
+| b=B; rest=list_eq1(A, C);
+{ Util.List_eq1_ge1.B (b, rest) }
+| b=B; rest=list_eq1_ge1(A, B, C);
+{ Util.List_eq1_ge1.B' (b, rest) }
+| c=C; rest=list_eq1_ge1(A, B, C);
+{ Util.List_eq1_ge1.C (c, rest) }
 
 (* Upon finding an identifier, the lexer emits two tokens. The first token,
    [NAME], indicates that a name has been found; the second token, either [TYPE]
@@ -255,9 +243,9 @@ let var_name :=
 (* [typedef_name_spec] must be declared before [general_identifier], so that the
    reduce/reduce conflict is solved the right way. *)
 
-typedef_name_spec:
-| typedef_name
-    {}
+let typedef_name_spec :=
+| ~=typedef_name;
+    <>
 
 let general_identifier :=
 | n=typedef_name;
@@ -568,42 +556,39 @@ storage_class_specifier:
 
 (* A type specifier which can appear together with other type specifiers. *)
 
-type_specifier_nonunique:
-| "char"
-| "short"
-| "int"
-| "long"
-| "float"
-| "double"
-| "signed"
-| "unsigned"
-| "_Complex"
-    {}
+let type_specifier_nonunique :=
+| "char"; { Gen.Type_specifier_nonunique.char }
+| "short"; { Gen.Type_specifier_nonunique.short }
+| "int"; { Gen.Type_specifier_nonunique.int }
+| "long"; { Gen.Type_specifier_nonunique.long }
+| "float"; { Gen.Type_specifier_nonunique.float }
+| "double"; { Gen.Type_specifier_nonunique.double }
+| "signed"; { Gen.Type_specifier_nonunique.signed }
+| "unsigned"; { Gen.Type_specifier_nonunique.unsigned }
+| "_Complex"; { Gen.Type_specifier_nonunique.complex }
 
 (* A type specifier which cannot appear together with other type specifiers. *)
 
-type_specifier_unique:
-| "void"
-| "_Bool"
-| atomic_type_specifier
-| struct_or_union_specifier
-| enum_specifier
-| typedef_name_spec
-    {}
+let type_specifier_unique :=
+| "void"; { Gen.Type_specifier_unique.void }
+| "_Bool"; { Gen.Type_specifier_unique.bool }
+| ~=atomic_type_specifier; <>
+| ~=struct_or_union_specifier; < Gen.Type_specifier_unique.struct_or_union >
+| ~=enum_specifier; < Gen.Type_specifier_unique.enum >
+| ~=as_typed(typedef_name_spec); < Gen.Type_specifier_unique.name >
 
-struct_or_union_specifier:
-| struct_or_union general_identifier? "{" struct_declaration_list "}"
-| struct_or_union general_identifier
-    {}
+let struct_or_union_specifier :=
+| ~=struct_or_union; ~=as_typed(general_identifier)?; "{"; ~=struct_declaration_list; "}";
+<Gen.Struct_or_union_specifier.defined>
+| ~=struct_or_union; ~=as_typed(general_identifier);
+<Gen.Struct_or_union_specifier.named>
 
 let struct_or_union :=
 | "struct"; { Gen.Struct_or_union.struct_ }
 | "union"; { Gen.Struct_or_union.union }
 
-struct_declaration_list:
-| struct_declaration
-| struct_declaration_list struct_declaration
-    {}
+let struct_declaration_list :=
+| ~=nonempty_list(struct_declaration); <>
 
 struct_declaration:
 | specifier_qualifier_list struct_declarator_list? ";"
@@ -612,7 +597,7 @@ struct_declaration:
 
 
 let qualifier_or_alignment :=
-| type_qualifier;
+| ~=type_qualifier;
 < Either.Left >
 | ~=alignment_specifier;
 < Either.Right >
@@ -635,29 +620,31 @@ struct_declarator:
 | declarator? ":" constant_expression
     {}
 
-enum_specifier:
-| "enum" general_identifier? "{" enumerator_list ","? "}"
-| "enum" general_identifier
-    {}
+let enum_specifier :=
+| "enum"; ~=as_typed(general_identifier)?; "{"; ~=enumerator_list; ","?; "}";
+< Gen.Enum.defined >
+| "enum"; ~=as_typed(general_identifier);
+< Gen.Enum.named >
 
-enumerator_list:
-| enumerator
-| enumerator_list "," enumerator
-    {}
+let enumerator_list :=
+| ~=separated_nonempty_list(",", enumerator); <>
 
-enumerator:
-| i = enumeration_constant
-| i = enumeration_constant "=" constant_expression
-    { Context.declare_varname (fst i) }
+let enumerator :=
+| i = enumeration_constant;
+{ Context.declare_varname (fst i); Gen.Enum_constant.named (snd i) }
+| i = enumeration_constant; "="; value=constant_expression;
+    { Context.declare_varname (fst i); Gen.Enum_constant.named ~value (snd i) }
 
 enumeration_constant:
 | i = general_identifier
     { i }
 
-atomic_type_specifier:
-| "_Atomic" "(" type_name ")"
-| "_Atomic" ATOMIC_LPAREN type_name ")"
-    {}
+let atomic_type_specifier :=
+| "_Atomic"; "("; ~=type_name; ")";
+< Gen.Type_specifier_unique.atomic >
+| "_Atomic"; ATOMIC_LPAREN; ~=type_name; ")";
+< Gen.Type_specifier_unique.atomic >
+    
 
 let type_qualifier :=
 | "const"; { Gen.Type_qualifier.const }
@@ -848,3 +835,8 @@ declaration_list:
 | declaration
 | declaration_list declaration
     {}
+
+single_expression:
+| e=expression ";"? EOF
+{ e }
+

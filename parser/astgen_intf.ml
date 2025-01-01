@@ -9,6 +9,25 @@ module type S = sig
 
   val locate : ('a -> 'a located) with_pos
 
+  module Var_name : sig
+    type t
+
+    val of_string : string -> t
+  end
+
+  module Typedef_name : sig
+    type t
+
+    val of_string : string -> t
+  end
+
+  module General_identifier : sig
+    type t
+
+    val of_string : string -> t
+  end
+
+
   module Type_qualifier : sig
     type t
     val const : t
@@ -30,25 +49,56 @@ module type S = sig
     val complex : t
   end
 
-  module Type_specifier_unique : sig
+  module rec Enum_constant : sig
+    type t
+
+    val named : ?value:Expr.t -> General_identifier.t -> t
+  end
+
+  and Enum : sig
+    type t
+
+    val named : General_identifier.t -> t
+    val defined : General_identifier.t option * Enum_constant.t list -> t
+  end
+
+  and Type_specifier_unique : sig
     type t
     val void : t
     val bool : t
+    val atomic : unit -> t
+    val enum : Enum.t -> t
+    val struct_or_union : Struct_or_union_specifier.t -> t
+    val name : Typedef_name.t -> t
   end
 
-  module Struct_or_union : sig
+  and Struct_or_union : sig
     type t
     val struct_ : t
     val union : t
   end
 
-  module Equality_operator : sig
+  and Struct_or_union_specifier : sig
+    type t
+
+    val named : Struct_or_union.t * General_identifier.t -> t
+
+    val defined : Struct_or_union.t * General_identifier.t option * Struct_declaration.t list -> t
+  end
+
+  and Struct_declaration : sig
+    type t = unit
+
+
+  end
+
+  and Equality_operator : sig
     type t
     val equal : t
     val not_equal : t
   end
 
-  module Relational_operator : sig
+  and Relational_operator : sig
     type t
     val less : t
     val greater : t
@@ -56,39 +106,39 @@ module type S = sig
     val greater_equal : t
   end
 
-  module Shift_operator : sig
+  and Shift_operator : sig
     type t
     val left : t
     val right : t
   end
 
-  module Additive_operator : sig
+  and Additive_operator : sig
     type t
     val plus : t
     val minus : t
   end
 
-  module Multiplicative_operator : sig
+  and Multiplicative_operator : sig
     type t
     val multiply : t
     val divide : t
     val modulo : t
   end
 
-  module Logical_operator : sig
+  and Logical_operator : sig
     type t
     val logical_and : t
     val logical_or : t
   end
 
-  module Bitwise_operator : sig
+  and Bitwise_operator : sig
     type t
     val bitwise_and : t
     val bitwise_xor : t
     val bitwise_or : t
   end
 
-  module Assignment_operator : sig
+  and Assignment_operator : sig
     type t
     val plain : t
     val bitwise : Bitwise_operator.t -> t
@@ -97,7 +147,7 @@ module type S = sig
     val shift : Shift_operator.t -> t
   end
 
-  module Unary_operator : sig
+  and Unary_operator : sig
     type t
     val address_of : t
     val dereference : t
@@ -112,27 +162,7 @@ module type S = sig
     val postdecrement : t
   end
 
-  module Var_name : sig
-    type t
-
-    val of_string : string -> t
-  end
-
-  module Typedef_name : sig
-    type t
-
-    val of_string : string -> t
-  end
-
-  module General_identifier : sig
-    type t
-
-    val of_string : string -> t
-    val var_name : Var_name.t -> t
-    val typedef_name : Typedef_name.t -> t
-  end
-
-  module Constant : sig
+  and Constant : sig
     type t
 
     val char : Literal.Char.t -> t
@@ -142,7 +172,7 @@ module type S = sig
     val hexadecimal_floating : string -> t
   end
 
-  module rec Generic_association : sig
+  and Generic_association : sig
     type t
 
     val default : Expr.t located -> t
@@ -188,12 +218,6 @@ module type S = sig
     type t
 
     val unique : t
-
-  end
-
-  and Struct_declaration : sig
-    type t
-
 
   end
 
