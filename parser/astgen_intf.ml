@@ -59,7 +59,7 @@ module type S = sig
     type t
 
     val named : General_identifier.t -> t
-    val defined : General_identifier.t option * Enum_constant.t list -> t
+    val defined : General_identifier.t option * Enum_constant.t list Util.Stored_reversed.t -> t
   end
 
   and Type_specifier_unique : sig
@@ -217,8 +217,62 @@ module type S = sig
   and Specifier_qualifier_list : sig
     type t
 
-    val unique : t
+    type qualifier_or_alignment := (Type_qualifier.t, Alignment_specifier.t) Either.t
 
+    val unique : (Type_specifier_unique.t, qualifier_or_alignment) Util.List_eq1.t -> t
+    val nonunique : (Type_specifier_nonunique.t, qualifier_or_alignment) Util.List_ge1.t -> t
+  end
+
+  and Declaration_specifier : sig
+    type t
+
+    val type_unique : (Type_specifier_unique.t, unit) Util.List_eq1.t -> t
+    val type_nonunique : (Type_specifier_nonunique.t, unit) Util.List_ge1.t -> t
+  end
+
+  and Declaration_specifier_typedef : sig
+    type t
+
+    val type_unique : (Typedef.t, Type_specifier_unique.t, unit) Util.List_eq1_eq1.t -> t
+    val type_nonunique : (Typedef.t, Type_specifier_nonunique.t, unit) Util.List_eq1_ge1.t -> t
+  end
+
+  and Typedef : sig
+    type t
+
+    val typedef : t
+  end
+
+  and Abstract_declarator : sig
+
+  end
+
+  and Pointer : sig
+    type t
+
+    val make : (Type_qualifier.t list Util.Stored_reversed.t option * t option) -> t
+
+  end
+
+  and Declarator : sig
+    type t
+
+    val identifier : General_identifier.t -> t
+    val pointer : (Pointer.t option * t) -> t
+
+    type type_qualifier_list := Type_qualifier.t list Util.Stored_reversed.t option
+
+    val array : (t * type_qualifier_list * Expr.t located option) -> t 
+    val static_array : (t * type_qualifier_list* Expr.t located) -> t
+    val unspecified_size_variable_array : (t * type_qualifier_list) -> t
+
+    val function_ : t * (Parameter_type_list.t, Var_name.t list option) Either.t -> t
+  end
+
+  and Parameter_type_list : sig
+    type t
+
+    val make : (unit list Util.Stored_reversed.t * bool) -> t
   end
 
 end

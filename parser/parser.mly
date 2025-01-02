@@ -143,8 +143,9 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 %token EOF
 
-%type<Context.snapshot> save_context parameter_type_list function_definition1
-%type<Context.snapshot Declarator.t> declarator direct_declarator
+%type<Context.snapshot> save_context function_definition1
+%type<Context.snapshot * Gen.Parameter_type_list.t> parameter_type_list
+%type<Context.snapshot Declarator.t * Gen.Declarator.t> declarator direct_declarator
 %type<Gen.Expr.t> unary_expression cast_expression postfix_expression additive_expression
 %type<Gen.Expr.t> multiplicative_expression shift_expression
 %type<Gen.Expr.t> relational_expression equality_expression primary_expression
@@ -180,6 +181,9 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 %public %inline located(X):
   x=X { Gen.locate ~start:$startpos(x) ~end_:$endpos(x) x }
+
+%inline get_context(X):
+  x=X { fst x }
 
 %inline as_typed(X):
   x=X { snd x }
@@ -266,11 +270,11 @@ scoped(X):
    a new variable or typedef name in the current context. *)
 
 declarator_varname:
-| d = declarator
+| d = get_context(declarator)
     { Context.declare_varname (Declarator.identifier d); d }
 
 declarator_typedefname:
-| d = declarator
+| d = get_context(declarator)
     { Context.declare_typedefname (Declarator.identifier d); d }
 
 (* Merge source-level string literals. *)
@@ -517,26 +521,29 @@ declaration_specifier:
 
    [declaration_specifiers] forbids the ["typedef"] keyword. *)
 
-declaration_specifiers:
-| list_eq1(type_specifier_unique,    declaration_specifier)
-| list_ge1(type_specifier_nonunique, declaration_specifier)
-    {}
+let declaration_specifiers :=
+| ~=list_eq1(type_specifier_unique,    declaration_specifier);
+< Gen.Declaration_specifier.type_unique >
+| ~=list_ge1(type_specifier_nonunique, declaration_specifier);
+< Gen.Declaration_specifier.type_nonunique >
 
 (* [declaration_specifiers_typedef] is analogous to [declaration_specifiers],
    but requires the ["typedef"] keyword to be present (exactly once). *)
 
-declaration_specifiers_typedef:
-| list_eq1_eq1("typedef", type_specifier_unique,    declaration_specifier)
-| list_eq1_ge1("typedef", type_specifier_nonunique, declaration_specifier)
-    {}
+let typedef :=
+| "typedef"; { Gen.Typedef.typedef }
+
+let declaration_specifiers_typedef :=
+| ~=list_eq1_eq1(typedef, type_specifier_unique,    declaration_specifier);
+<Gen.Declaration_specifier_typedef.type_unique>
+| ~=list_eq1_ge1(typedef, type_specifier_nonunique, declaration_specifier);
+<Gen.Declaration_specifier_typedef.type_nonunique>
 
 (* The parameter [declarator] in [init_declarator_list] and [init_declarator]
    is instantiated with [declarator_varname] or [declarator_typedefname]. *)
 
-init_declarator_list(declarator):
-| init_declarator(declarator)
-| init_declarator_list(declarator) "," init_declarator(declarator)
-    {}
+let init_declarator_list(declarator) :=
+  ~=separated_nonempty_list(",", init_declarator(declarator)); <>
 
 init_declarator(declarator):
 | declarator
@@ -605,10 +612,11 @@ let qualifier_or_alignment :=
 (* [specifier_qualifier_list] is as in the standard, except it also encodes the
    same constraint as [declaration_specifiers] (see above). *)
 
-specifier_qualifier_list:
-| list_eq1(type_specifier_unique,    qualifier_or_alignment)
-| list_ge1(type_specifier_nonunique, qualifier_or_alignment)
-    {}
+let specifier_qualifier_list :=
+| ~=list_eq1(type_specifier_unique,    qualifier_or_alignment);
+    <Gen.Specifier_qualifier_list.unique>
+| ~=list_ge1(type_specifier_nonunique, qualifier_or_alignment);
+    <Gen.Specifier_qualifier_list.nonunique>
 
 struct_declarator_list:
 | struct_declarator
@@ -627,7 +635,8 @@ let enum_specifier :=
 < Gen.Enum.named >
 
 let enumerator_list :=
-| ~=separated_nonempty_list(",", enumerator); <>
+| ~=enumerator; < Util.Stored_reversed.singleton >
+| ~=enumerator_list; ","; ~=enumerator; < Util.Stored_reversed.snoc >
 
 let enumerator :=
 | i = enumeration_constant;
@@ -662,9 +671,11 @@ let alignment_specifier :=
 | "_Alignas"; "("; ~=located(constant_expression); ")";
     < Gen.Alignment_specifier.alignas_expression >
 
-declarator:
-| ioption(pointer) d = direct_declarator
-    { Declarator.other_declarator d }
+let declarator :=
+| p=ioption(pointer); d = direct_declarator;
+    { let parser_d, result_d = d in
+      let result = Gen.Declarator.pointer (p, result_d) in
+      Declarator.other_declarator parser_d, result }
 
 (* The occurrences of [save_context] inside [direct_declarator] and
    [direct_abstract_declarator] seem to serve no purpose. In fact, they are
@@ -672,47 +683,62 @@ declarator:
    the context at this point because the LR automaton is exploring multiple
    avenues in parallel and some of them do require saving the context. *)
 
-direct_declarator:
-| i = as_untyped(general_identifier)
-    { Declarator.identifier_declarator i }
-| "(" save_context d = declarator ")"
+let direct_declarator :=
+| i = general_identifier;
+    { Declarator.identifier_declarator (fst i)
+    , Gen.Declarator.identifier (snd i)
+    }
+| "("; save_context; d = declarator; ")";
     { d }
-| d = direct_declarator "[" type_qualifier_list? assignment_expression? "]"
-| d = direct_declarator "[" "static" type_qualifier_list? assignment_expression "]"
-| d = direct_declarator "[" type_qualifier_list "static" assignment_expression "]"
-| d = direct_declarator "[" type_qualifier_list? "*" "]"
-    { Declarator.other_declarator d }
-| d = direct_declarator "(" ctx = scoped(parameter_type_list) ")"
-    { Declarator.function_declarator d ctx }
-| d = direct_declarator "(" save_context identifier_list? ")"
-    { Declarator.other_declarator d }
+| d = direct_declarator; "["; t=type_qualifier_list?; e=located(assignment_expression)?; "]";
+    { Declarator.other_declarator (fst d)
+    , Gen.Declarator.array (snd d, t, e)
+    }
+| d = direct_declarator; "["; "static"; t=type_qualifier_list?; e=located(assignment_expression); "]";
+    { Declarator.other_declarator (fst d)
+    , Gen.Declarator.static_array (snd d, t, e)
+    }
+| d = direct_declarator; "["; t=type_qualifier_list; "static"; e=located(assignment_expression); "]";
+    { Declarator.other_declarator (fst d)
+    , Gen.Declarator.static_array (snd d, Some t, e)
+    }
+| d = direct_declarator; "["; t=type_qualifier_list?; "*"; "]";
+    { Declarator.other_declarator (fst d)
+    , Gen.Declarator.unspecified_size_variable_array (snd d, t)
+    }
+| d = direct_declarator; "("; p = scoped(parameter_type_list); ")";
+    { Declarator.function_declarator (fst d) (fst p)
+    , Gen.Declarator.function_ (snd d, Left (snd p))
+    }
+| d = direct_declarator; "("; save_context; i=identifier_list?; ")";
+    { Declarator.other_declarator (fst d)
+    , Gen.Declarator.function_ (snd d, Right i)
+    }
 
-pointer:
-| "*" type_qualifier_list? pointer?
-    {}
+let pointer :=
+| "*"; ~=type_qualifier_list?; ~=pointer?;
+    < Gen.Pointer.make >
 
-type_qualifier_list:
-| type_qualifier_list? type_qualifier
-    {}
+let type_qualifier_list :=
+| ~=type_qualifier_list?; ~=type_qualifier;
+    < Util.Stored_reversed.snoc_opt >
 
-parameter_type_list:
-| parameter_list option("," "..." {}) ctx = save_context
-    { ctx }
+let parameter_type_list :=
+| p=parameter_list; d=option(","; "..."; {}); ctx = save_context;
+    { ctx
+    , Gen.Parameter_type_list.make (p, Option.is_some d)
+    }
 
-parameter_list:
-| parameter_declaration
-| parameter_list "," parameter_declaration
-    {}
+let parameter_list :=
+| ~=parameter_declaration; < Util.Stored_reversed.singleton >
+| ~=parameter_list; ","; ~=parameter_declaration; < Util.Stored_reversed.snoc >
 
 parameter_declaration:
 | declaration_specifiers declarator_varname
 | declaration_specifiers abstract_declarator?
     {}
 
-identifier_list:
-| var_name
-| identifier_list "," var_name
-    {}
+let identifier_list := ~=separated_nonempty_list(",", as_typed(var_name)); <>
 
 type_name:
 | specifier_qualifier_list abstract_declarator?
