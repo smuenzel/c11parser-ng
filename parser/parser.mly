@@ -311,10 +311,9 @@ generic_selection:
 | "_Generic" "(" assignment_expression "," generic_assoc_list ")"
     {}
 
-generic_assoc_list:
-| generic_association
-| generic_assoc_list "," generic_association
-    {}
+let generic_assoc_list :=
+| ~=generic_association; < Util.Stored_reversed.singleton >
+| ~=generic_assoc_list; ","; ~=generic_association; < Util.Stored_reversed.snoc >
 
 generic_association:
 | type_name ":" assignment_expression
@@ -324,10 +323,10 @@ generic_association:
 let postfix_expression :=
 | ~=primary_expression;
   <>
-| postfix_expression; "["; expression; "]";
-  { failwith ""}
-| postfix_expression; "(" ;argument_expression_list?; ")";
-  { failwith ""}
+| ~=located(postfix_expression); "["; ~=located(expression); "]";
+< Gen.Expr.array_subscript >
+| ~=located(postfix_expression); "("; ~=argument_expression_list?; ")";
+< Gen.Expr.function_call >
 | ~=located(postfix_expression); "."; ~=as_typed(general_identifier);
   < Gen.Expr.dot >
 | ~=located(postfix_expression); "->"; ~=as_typed(general_identifier);
@@ -339,10 +338,10 @@ let postfix_expression :=
 | "("; type_name; ")"; "{"; initializer_list; ","?; "}";
     { failwith ""}
 
-argument_expression_list:
-| assignment_expression
-| argument_expression_list "," assignment_expression
-    {}
+let argument_expression_list :=
+| ~=located(assignment_expression); < Util.Stored_reversed.singleton >
+| ~=argument_expression_list; ","; ~=located(assignment_expression);
+< Util.Stored_reversed.snoc >
 
 let unary_expression :=
 | ~=postfix_expression;
@@ -556,13 +555,12 @@ init_declarator(declarator):
 (* [storage_class_specifier] corresponds to storage-class-specifier in the
    C18 standard, deprived of ["typedef"] (which receives special treatment). *)
 
-storage_class_specifier:
-| "extern"
-| "static"
-| "_Thread_local"
-| "auto"
-| "register"
-    {}
+let storage_class_specifier :=
+| "extern"; { Gen.Storage_class_specifier.extern }
+| "static"; { Gen.Storage_class_specifier.static }
+| "_Thread_local"; { Gen.Storage_class_specifier.thread_local }
+| "auto"; { Gen.Storage_class_specifier.auto }
+| "register"; { Gen.Storage_class_specifier.register }
 
 (* A type specifier which can appear together with other type specifiers. *)
 

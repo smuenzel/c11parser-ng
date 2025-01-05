@@ -36,6 +36,15 @@ module type S = sig
     val atomic : t
   end
 
+  module Storage_class_specifier : sig
+    type t
+    val static : t
+    val extern : t
+    val thread_local : t
+    val auto : t
+    val register : t
+  end
+
   module Type_specifier_nonunique : sig
     type t
     val char : t
@@ -197,6 +206,9 @@ module type S = sig
     val var : Var_name.t -> t
     val constant : Constant.t -> t
 
+    val array_subscript : (t' * t') -> t
+    val function_call : (t' * t' list Util.Stored_reversed.t option) -> t
+
     val generic : unit -> t
 
     val comma : t' * t' -> t
@@ -235,6 +247,11 @@ module type S = sig
     type t
 
     val typedef : t
+  end
+
+  and Init_declarator : sig
+    type 'a t
+
   end
 
   and Abstract_declarator : sig
