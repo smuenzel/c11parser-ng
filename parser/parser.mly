@@ -172,7 +172,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 %nonassoc below_ELSE
 %nonassoc ELSE
 
-%start<unit> translation_unit_file
+%start<unit list> translation_unit_file
 %start<Gen.Expr.t> single_expression
 
 %%
@@ -184,6 +184,9 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 %inline get_context(X):
   x=X { fst x }
+
+%inline drop_context(X):
+  x=X { snd x }
 
 %inline as_typed(X):
   x=X { snd x }
@@ -597,11 +600,11 @@ let struct_or_union :=
 let struct_declaration_list :=
 | ~=nonempty_list(struct_declaration); <>
 
-struct_declaration:
-| specifier_qualifier_list struct_declarator_list? ";"
-| static_assert_declaration
-    {}
-
+let struct_declaration :=
+| ~=specifier_qualifier_list; ~=struct_declarator_list?; ";";
+  < Gen.Struct_declaration.make >
+| static_assert_declaration;
+  < Gen.Struct_declaration.static_assert >
 
 let qualifier_or_alignment :=
 | ~=type_qualifier;
@@ -618,15 +621,16 @@ let specifier_qualifier_list :=
 | ~=list_ge1(type_specifier_nonunique, qualifier_or_alignment);
     <Gen.Specifier_qualifier_list.nonunique>
 
-struct_declarator_list:
-| struct_declarator
-| struct_declarator_list "," struct_declarator
-    {}
+let struct_declarator_list :=
+| ~=struct_declarator; < Util.Stored_reversed.singleton >
+| ~=struct_declarator_list; ","; ~=struct_declarator;
+    < Util.Stored_reversed.snoc >
 
-struct_declarator:
-| declarator
-| declarator? ":" constant_expression
-    {}
+let struct_declarator :=
+| ~=drop_context(declarator);
+  < Gen.Struct_declarator.declarator >
+| d=declarator?; ":"; x=located(constant_expression);
+  { Gen.Struct_declarator.bit_field (Option.map snd d, x) }
 
 let enum_specifier :=
 | "enum"; ~=as_typed(general_identifier)?; "{"; ~=enumerator_list; ","?; "}";
@@ -785,62 +789,73 @@ static_assert_declaration:
 | "_Static_assert" "(" constant_expression "," string_literal ")" ";"
     {}
 
-statement:
-| labeled_statement
-| scoped(compound_statement)
-| expression_statement
-| scoped(selection_statement)
-| scoped(iteration_statement)
-| jump_statement
-    {}
+let statement :=
+| ~=labeled_statement; < Gen.Statement.labeled >
+| ~=scoped(compound_statement); < Gen.Statement.compound >
+| ~=expression_statement; < Gen.Statement.expression >
+| ~=scoped(selection_statement); < Gen.Statement.selection >
+| ~=scoped(iteration_statement); < Gen.Statement.iteration >
+| ~=jump_statement; < Gen.Statement.jump >
 
-labeled_statement:
-| general_identifier ":" statement
-| "case" constant_expression ":" statement
-| "default" ":" statement
-    {}
+let labeled_statement :=
+| ~=as_typed(general_identifier); ":"; ~=located(statement);
+< Gen.Labeled_statement.label >
+| "case"; ~=located(constant_expression); ":"; ~=located(statement);
+< Gen.Labeled_statement.case >
+| "default"; ":"; ~=located(statement);
+< Gen.Labeled_statement.default >
 
-compound_statement:
-| "{" block_item_list? "}"
-    {}
+let compound_statement :=
+| "{"; ~=block_item_list?; "}";
+    < Gen.Compound_statement.make >
 
-block_item_list:
-| block_item_list? block_item
-    {}
+let block_item_list :=
+| ~=block_item_list?; ~=block_item;
+    < Util.Stored_reversed.snoc_opt >
 
-block_item:
-| declaration
-| statement
-    {}
+let block_item :=
+| ~=declaration;
+< Gen.Block_item.declaration >
+| ~=located(statement);
+< Gen.Block_item.statement >
 
-expression_statement:
-| expression? ";"
-    {}
+let expression_statement :=
+| ~=located(expression)?; ";";
+< Gen.Expression_statement.make >
 
-selection_statement:
-| "if" "(" expression ")" scoped(statement) "else" scoped(statement)
-| "if" "(" expression ")" scoped(statement) %prec below_ELSE
-| "switch" "(" expression ")" scoped(statement)
-    {}
+let selection_statement :=
+| "if"; "("; ~=located(expression); ")"; ~=located(scoped(statement)); "else"; ~=located(scoped(statement));
+    < Gen.Selection_statement.if_else >
+| "if"; "("; ~=located(expression); ")"; ~=located(scoped(statement)); %prec below_ELSE
+< Gen.Selection_statement.if_ >
+| "switch"; "("; ~=located(expression); ")"; ~=located(scoped(statement));
+< Gen.Selection_statement.switch >
 
-iteration_statement:
-| "while" "(" expression ")" scoped(statement)
-| "do" scoped(statement) "while" "(" expression ")" ";"
-| "for" "(" expression? ";" expression? ";" expression? ")" scoped(statement)
-| "for" "(" declaration expression? ";" expression? ")" scoped(statement)
-    {}
+let iteration_statement :=
+| "while"; "("; ~=located(expression); ")"; ~=located(scoped(statement));
+< Gen.Iteration_statement.while_ >
+| "do"; ~=located(scoped(statement)); "while"; "("; ~=located(expression); ")"; ";";
+< Gen.Iteration_statement.do_ >
+| "for"; "("; ~=located(expression)?; ";"; ~=located(expression)?; ";"; ~=located(expression)?; ")"; ~=located(scoped(statement));
+< Gen.Iteration_statement.for_expr >
+| "for"; "("; ~=located(declaration); ~=located(expression)?; ";"; ~=located(expression)?; ")"; ~=located(scoped(statement));
+< Gen.Iteration_statement.for_decl >
 
-jump_statement:
-| "goto" general_identifier ";"
-| "continue" ";"
-| "break" ";"
-| "return" expression? ";"
-    {}
+let jump_statement :=
+| "goto"; ~=as_typed(general_identifier); ";";
+< Gen.Jump_statement.goto >
+| "continue"; ";";
+< Gen.Jump_statement.continue >
+| "break"; ";";
+< Gen.Jump_statement.break >
+| "return"; ~=located(expression)?; ";";
+< Gen.Jump_statement.return >
 
-translation_unit_file:
-| external_declaration translation_unit_file
-| external_declaration EOF
-    {}
+let translation_unit_file :=
+| e=external_declaration; t=translation_unit_file;
+{ e :: t }
+| e=external_declaration; EOF;
+{ [ e ] }
 
 external_declaration:
 | function_definition
@@ -857,10 +872,11 @@ function_definition:
 | ctx = function_definition1 declaration_list? compound_statement
     { Context.restore_context ctx }
 
-declaration_list:
-| declaration
-| declaration_list declaration
-    {}
+let declaration_list :=
+| declaration;
+    < Util.Stored_reversed.singleton >
+| ~=declaration_list; ~=declaration;
+    < Util.Stored_reversed.snoc >
 
 single_expression:
 | e=expression ";"? EOF

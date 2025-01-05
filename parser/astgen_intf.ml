@@ -86,12 +86,6 @@ module type S = sig
     val defined : Struct_or_union.t * General_identifier.t option * Struct_declaration.t list -> t
   end
 
-  and Struct_declaration : sig
-    type t = unit
-
-
-  end
-
   and Equality_operator : sig
     type t
     val equal : t
@@ -273,6 +267,84 @@ module type S = sig
     type t
 
     val make : (unit list Util.Stored_reversed.t * bool) -> t
+  end
+
+  and Struct_declarator : sig
+    type t
+
+    val declarator : Declarator.t -> t
+    val bit_field : (Declarator.t option * Expr.t located) -> t
+  end
+
+  and Struct_declaration : sig
+    type t
+
+    val make : (Specifier_qualifier_list.t * Struct_declarator.t list Util.Stored_reversed.t option) -> t
+
+    val static_assert : unit -> t
+
+  end
+
+  and Compound_statement : sig
+    type t
+    val make : (Block_item.t list Util.Stored_reversed.t option) -> t
+  end
+
+  and Expression_statement : sig
+    type t
+    val make : Expr.t located option -> t
+  end
+
+  and Selection_statement : sig
+    type t
+    val if_else : (Expr.t located * Statement.t located * Statement.t located) -> t
+    val if_ : (Expr.t located * Statement.t located) -> t
+    val switch : (Expr.t located * Statement.t located) -> t
+  end
+
+  and Labeled_statement : sig
+    type t
+
+    val label : (General_identifier.t * Statement.t located) -> t
+    val case : (Expr.t located * Statement.t located) -> t
+    val default : Statement.t located -> t
+  end
+
+  and Iteration_statement : sig
+    type t
+    val while_ : (Expr.t located * Statement.t located) -> t
+    val do_ : (Statement.t located * Expr.t located) -> t
+    val for_expr : (Expr.t located option * Expr.t located option * Expr.t located option * Statement.t located) -> t
+    val for_decl : (Declaration.t located * Expr.t located option * Expr.t located option * Statement.t located) -> t
+  end
+
+  and Jump_statement : sig
+    type t
+    val goto : General_identifier.t -> t
+    val continue : unit -> t
+    val break : unit -> t
+    val return : Expr.t located option -> t
+  end
+
+  and Block_item : sig
+    type t
+    val statement : Statement.t located -> t
+    val declaration : Declaration.t -> t
+  end
+
+  and Statement : sig
+    type t
+
+    val compound : Compound_statement.t -> t
+    val expression : Expression_statement.t -> t
+    val selection : Selection_statement.t -> t
+    val labeled : Labeled_statement.t -> t
+    val iteration : Iteration_statement.t -> t
+    val jump : Jump_statement.t -> t
+  end
+
+  and Declaration : sig
+    type t = unit
   end
 
 end
