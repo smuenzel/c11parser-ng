@@ -45,6 +45,12 @@ module type S = sig
     val register : t
   end
 
+  module Function_specifier : sig
+    type t
+    val inline : t
+    val noreturn : t
+  end
+
   module Type_specifier_nonunique : sig
     type t
     val char : t
@@ -232,15 +238,25 @@ module type S = sig
   and Declaration_specifier : sig
     type t
 
-    val type_unique : (Type_specifier_unique.t, unit) Util.List_eq1.t -> t
-    val type_nonunique : (Type_specifier_nonunique.t, unit) Util.List_ge1.t -> t
+    val storage_class_specifier : Storage_class_specifier.t -> t
+    val type_qualifier : Type_qualifier.t -> t
+    val function_specifier : Function_specifier.t -> t
+    val alignment_specifier : Alignment_specifier.t -> t
+
   end
 
-  and Declaration_specifier_typedef : sig
+  and Declaration_specifiers : sig
     type t
 
-    val type_unique : (Typedef.t, Type_specifier_unique.t, unit) Util.List_eq1_eq1.t -> t
-    val type_nonunique : (Typedef.t, Type_specifier_nonunique.t, unit) Util.List_eq1_ge1.t -> t
+    val type_unique : (Type_specifier_unique.t, Declaration_specifier.t) Util.List_eq1.t -> t
+    val type_nonunique : (Type_specifier_nonunique.t, Declaration_specifier.t) Util.List_ge1.t -> t
+  end
+
+  and Declaration_specifiers_typedef : sig
+    type t
+
+    val type_unique : (Typedef.t, Type_specifier_unique.t, Declaration_specifier.t) Util.List_eq1_eq1.t -> t
+    val type_nonunique : (Typedef.t, Type_specifier_nonunique.t, Declaration_specifier.t) Util.List_eq1_ge1.t -> t
   end
 
   and Typedef : sig
@@ -252,6 +268,8 @@ module type S = sig
   and Init_declarator : sig
     type 'a t
 
+    val make : 'a -> 'a t
+    val with_initializer : ('a * unit) -> 'a t
   end
 
   and Abstract_declarator : sig
@@ -361,7 +379,9 @@ module type S = sig
   end
 
   and Declaration : sig
-    type t = unit
+    type t
+    val normal : Declaration_specifiers.t * Declarator.t Init_declarator.t list option -> t
+    val typedef : Declaration_specifiers_typedef.t * Declarator.t Init_declarator.t list option -> t
   end
 
 end

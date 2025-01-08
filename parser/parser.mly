@@ -152,6 +152,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 %type<string*Gen.Typedef_name.t> typedef_name
 %type<string*Gen.Var_name.t> var_name
 %type<string*Gen.General_identifier.t> general_identifier
+%type<Gen.Declaration.t> declaration
 
 (* There is a reduce/reduce conflict in the grammar. It corresponds to the
    conflict in the second declaration in the following snippet:
@@ -273,12 +274,12 @@ scoped(X):
    a new variable or typedef name in the current context. *)
 
 declarator_varname:
-| d = get_context(declarator)
-    { Context.declare_varname (Declarator.identifier d); d }
+| d = declarator
+    { Context.declare_varname (Declarator.identifier (fst d)); d }
 
 declarator_typedefname:
-| d = get_context(declarator)
-    { Context.declare_typedefname (Declarator.identifier d); d }
+| d = declarator
+    { Context.declare_typedefname (Declarator.identifier (fst d)); d }
 
 (* Merge source-level string literals. *)
 let string_literal :=
@@ -489,21 +490,26 @@ let constant_expression :=
    the grammar/ whether a declaration introduces typedef names or variables in
    the context. *)
 
-declaration:
-| declaration_specifiers         init_declarator_list(declarator_varname)?     ";"
-| declaration_specifiers_typedef init_declarator_list(declarator_typedefname)? ";"
-| static_assert_declaration
-    {}
+let declaration :=
+| ~=declaration_specifiers;         ~=init_declarator_list(as_typed(declarator_varname))?;     ";";
+< Gen.Declaration.normal >
+| ~=declaration_specifiers_typedef; ~=init_declarator_list(as_typed(declarator_typedefname))?; ";";
+< Gen.Declaration.typedef >
+| static_assert_declaration;
+    { assert false }
 
 (* [declaration_specifier] corresponds to one declaration specifier in the C18
    standard, deprived of "typedef" and of type specifiers. *)
 
-declaration_specifier:
-| storage_class_specifier (* deprived of "typedef" *)
-| type_qualifier
-| function_specifier
-| alignment_specifier
-    {}
+let declaration_specifier :=
+| ~=storage_class_specifier (* deprived of "typedef" *);
+< Gen.Declaration_specifier.storage_class_specifier >
+| ~=type_qualifier;
+< Gen.Declaration_specifier.type_qualifier >
+| ~=function_specifier;
+< Gen.Declaration_specifier.function_specifier >
+| ~=alignment_specifier;
+< Gen.Declaration_specifier.alignment_specifier >
 
 (* [declaration_specifiers] requires that at least one type specifier be
    present, and, if a unique type specifier is present, then no other type
@@ -525,9 +531,9 @@ declaration_specifier:
 
 let declaration_specifiers :=
 | ~=list_eq1(type_specifier_unique,    declaration_specifier);
-< Gen.Declaration_specifier.type_unique >
+< Gen.Declaration_specifiers.type_unique >
 | ~=list_ge1(type_specifier_nonunique, declaration_specifier);
-< Gen.Declaration_specifier.type_nonunique >
+< Gen.Declaration_specifiers.type_nonunique >
 
 (* [declaration_specifiers_typedef] is analogous to [declaration_specifiers],
    but requires the ["typedef"] keyword to be present (exactly once). *)
@@ -537,9 +543,9 @@ let typedef :=
 
 let declaration_specifiers_typedef :=
 | ~=list_eq1_eq1(typedef, type_specifier_unique,    declaration_specifier);
-<Gen.Declaration_specifier_typedef.type_unique>
+<Gen.Declaration_specifiers_typedef.type_unique>
 | ~=list_eq1_ge1(typedef, type_specifier_nonunique, declaration_specifier);
-<Gen.Declaration_specifier_typedef.type_nonunique>
+<Gen.Declaration_specifiers_typedef.type_nonunique>
 
 (* The parameter [declarator] in [init_declarator_list] and [init_declarator]
    is instantiated with [declarator_varname] or [declarator_typedefname]. *)
@@ -547,10 +553,9 @@ let declaration_specifiers_typedef :=
 let init_declarator_list(declarator) :=
   ~=separated_nonempty_list(",", init_declarator(declarator)); <>
 
-init_declarator(declarator):
-| declarator
-| declarator "=" c_initializer
-    {}
+let init_declarator(declarator) :=
+| ~=declarator; < Gen.Init_declarator.make >
+| ~=declarator; "="; ~=c_initializer; < Gen.Init_declarator.with_initializer >
 
 (* [storage_class_specifier] corresponds to storage-class-specifier in the
    C18 standard, deprived of ["typedef"] (which receives special treatment). *)
@@ -663,9 +668,9 @@ let type_qualifier :=
 | "volatile"; { Gen.Type_qualifier.volatile }
 | "_Atomic"; { Gen.Type_qualifier.atomic }
 
-function_specifier:
-  "inline" | "_Noreturn"
-    {}
+let function_specifier :=
+| "inline"; { Gen.Function_specifier.inline }
+| "_Noreturn"; { Gen.Function_specifier.noreturn }
 
 let alignment_specifier :=
 | "_Alignas"; "("; ~=type_name; ")";
@@ -770,13 +775,11 @@ initializer_list:
 | initializer_list "," designation? c_initializer
     {}
 
-designation:
-| designator_list "="
-    {}
+let designation :=
+| ~=designator_list; "="; <>
 
-designator_list:
-| designator_list? designator
-    {}
+let designator_list :=
+| ~=designator_list?; ~=designator; < Util.Stored_reversed.snoc_opt >
 
 designator:
 | "[" constant_expression "]"
@@ -863,7 +866,7 @@ external_declaration:
 function_definition1:
 | declaration_specifiers d = declarator_varname
     { let ctx = Context.save_context () in
-      Declarator.reinstall_function_context (module Context) d;
+      Declarator.reinstall_function_context (module Context) (fst d);
       ctx }
 
 function_definition:
@@ -871,7 +874,7 @@ function_definition:
     { Context.restore_context ctx }
 
 let declaration_list :=
-| declaration;
+| ~=declaration;
     < Util.Stored_reversed.singleton >
 | ~=declaration_list; ~=declaration;
     < Util.Stored_reversed.snoc >
