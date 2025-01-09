@@ -186,7 +186,13 @@ module type S = sig
     type t
 
     val default : Expr.t located -> t
-    val type_name : unit -> Expr.t located -> t
+    val type_name : Type_name.t * Expr.t located -> t
+  end
+
+  and Generic_selection : sig
+    type t
+
+    val make : Expr.t located * Generic_association.t rev -> t
   end
 
   and Expr : sig
@@ -216,7 +222,7 @@ module type S = sig
     val array_subscript : (t' * t') -> t
     val function_call : (t' * t' rev option) -> t
 
-    val generic : unit -> t
+    val generic : Generic_selection.t -> t
 
     val comma : t' * t' -> t
   end

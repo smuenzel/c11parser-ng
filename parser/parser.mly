@@ -307,21 +307,22 @@ let primary_expression :=
   { Gen.Expr.constant (Gen.Constant.string x) }
 | "("; ~=expression; ")";
   <>
-| generic_selection;
-    { Gen.Expr.generic () }
+| ~=generic_selection;
+< Gen.Expr.generic >
 
-generic_selection:
-| "_Generic" "(" assignment_expression "," generic_assoc_list ")"
-    {}
+let generic_selection :=
+| "_Generic"; "("; ~=located(assignment_expression); ","; ~=generic_assoc_list; ")";
+< Gen.Generic_selection.make >
 
 let generic_assoc_list :=
 | ~=generic_association; < Util.Stored_reversed.singleton >
 | ~=generic_assoc_list; ","; ~=generic_association; < Util.Stored_reversed.snoc >
 
-generic_association:
-| type_name ":" assignment_expression
-| "default" ":" assignment_expression
-    {}
+let generic_association :=
+| ~=type_name; ":"; ~=located(assignment_expression);
+< Gen.Generic_association.type_name >
+| "default"; ":"; ~=located(assignment_expression);
+< Gen.Generic_association.default >
 
 let postfix_expression :=
 | ~=primary_expression;
