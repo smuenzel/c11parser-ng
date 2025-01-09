@@ -295,7 +295,7 @@ let rec initial lexbuf : Token.t =
   | eof                           ->  EOF 
   | _                             ->  
     raise_lexer_error lexbuf "Initial"
-  
+
 and initial_linebegin lexbuf =
   match%sedlex lexbuf with
   | '\n'                          ->  new_line lexbuf; initial_linebegin lexbuf 
@@ -349,9 +349,9 @@ and hash lexbuf =
     )
   | Star whitespace_char_no_newline, "pragma", Plus whitespace_char_no_newline,
     Star (Compl '\n'), '\n'
-      ->  new_line lexbuf; initial_linebegin lexbuf 
+    ->  new_line lexbuf; initial_linebegin lexbuf 
   | Compl '\n', eof
-      ->  failwith "unexpected end of file" 
+    ->  failwith "unexpected end of file" 
   | _
     ->
     raise_lexer_error lexbuf "Hash"

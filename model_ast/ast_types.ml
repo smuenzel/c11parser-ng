@@ -247,7 +247,7 @@ module Make(L : Located) = struct
           { name : General_identifier.t option
           ; values : Enum_constant.t list
           }
-      [@@deriving sexp, compare, hash, variants]
+    [@@deriving sexp, compare, hash, variants]
   end = Enum
 
   and Type_specifier_unique : sig
@@ -296,7 +296,7 @@ module Make(L : Located) = struct
         | Logical of Logical_operator.t
         | Bitwise of Bitwise_operator.t
         | Assignment of Assignment_operator.t
-        [@@deriving sexp, compare, hash, variants]
+      [@@deriving sexp, compare, hash, variants]
     end
     type t =
       | Binary of
@@ -355,7 +355,7 @@ module Make(L : Located) = struct
 
   and Qualifier_or_alignment : sig
     type t = (Type_qualifier.t, Alignment_specifier.t) Base.Either.t
-        [@@deriving sexp, compare, hash]
+    [@@deriving sexp, compare, hash]
   end = Qualifier_or_alignment
 
   and Specifier_qualifier_list : sig
@@ -406,7 +406,7 @@ module Make(L : Located) = struct
           ; inner : t
           }
       | Pointer of t
-      [@@deriving sexp, compare, hash, variants]
+    [@@deriving sexp, compare, hash, variants]
   end = Pointer
 
   and Declarator : sig
@@ -486,7 +486,7 @@ module Make(L : Located) = struct
           { specifiers : Declaration_specifiers.t
           ; declarator : Abstract_declarator.t option
           }
-      [@@deriving sexp, compare, hash, variants]
+    [@@deriving sexp, compare, hash, variants]
   end = Parameter_declaration
 
   and Struct_declarator : sig
@@ -621,7 +621,7 @@ module Make(L : Located) = struct
       ; abstract_declarator : Abstract_declarator.t option
       } [@@deriving sexp, compare, hash]
   end = Type_name
-      
+
   and Static_assert_declaration : sig
     type t =
       { condition : Expr.t located

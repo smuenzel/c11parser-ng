@@ -11,5 +11,5 @@ let test s =
   let lexbuf = Sedlexing.Utf8.from_string s in
   let edl = P.translation_unit_file lexbuf in
   [%message.omit_nil ""
-    ~_: (edl : Ast.External_declaration.t list)]
+      ~_: (edl : Ast.External_declaration.t list)]
   |> print_s

@@ -8,7 +8,7 @@ struct {
   _Alignas(int) char x;
 } s;
     |};
-[%expect {|
+  [%expect {|
   ((Declaration
     (Normal
      (specifiers
@@ -40,7 +40,7 @@ void blah(int foo) {
   foo = 1;
 }
     |};
-[%expect {|
+  [%expect {|
   ((Declaration
     (Typedef
      (specifiers
@@ -96,7 +96,7 @@ _Atomic atomic_s_no_missing_semicolon;
 
 int *const _Atomic atomic_return_type();
     |};
-[%expect {|
+  [%expect {|
   ((Declaration
     (Typedef
      (specifiers
@@ -253,7 +253,7 @@ let%expect_test "atomic_parenthesis" =
 // atomic_parenthesis.c
 int _Atomic (x);
     |};
-[%expect {|
+  [%expect {|
   ((Declaration
     (Normal (specifiers (Nonunique (Eq Int ((Type_qualifier Atomic)))))
      (init_declarators ((Plain (Identifier x)))))))
@@ -269,7 +269,7 @@ struct S {
   const T:3;    // anonymous bit-field with type const T
 };
     |};
-[%expect {|
+  [%expect {|
   ((Declaration
     (Typedef (specifiers (Nonunique (A Typedef (A Signed (Eq Int ())))))
      (declarators ((Plain (Identifier T))))))
@@ -308,7 +308,7 @@ int f(struct S s) {
   return s.T;
 }
     |};
-[%expect {|
+  [%expect {|
   ((Declaration
     (Typedef (specifiers (Nonunique (A Typedef (A Signed (Eq Int ())))))
      (declarators ((Plain (Identifier T))))))
@@ -356,7 +356,7 @@ int f(struct S s) {
   return s.T;
 }
     |};
-[%expect {|
+  [%expect {|
   ((Declaration
     (Typedef (specifiers (Nonunique (A Typedef (A Signed (Eq Int ())))))
      (declarators ((Plain (Identifier T))))))
@@ -406,7 +406,7 @@ void f(void) {
   T u;   // T as a variable is no longer visible
 }
     |};
-[%expect {|
+  [%expect {|
   ((Declaration
     (Typedef (specifiers (Nonunique (A Typedef (Eq Int ()))))
      (declarators ((Plain (Identifier T))))))
@@ -451,7 +451,7 @@ let%expect_test "c11-noreturn" =
 _Noreturn int f();
 int _Noreturn f();
     |};
-[%expect {|
+  [%expect {|
   ((Declaration
     (Normal
      (specifiers (Nonunique (B (Function_specifier Noreturn) (Eq Int ()))))
@@ -472,7 +472,7 @@ unsigned _Alignas(long) char c2;
 char _Alignas(16) c3;
 char _Alignas(_Alignof(int)) c5;
     |};
-[%expect {|
+  [%expect {|
   ((Declaration
     (Normal
      (specifiers
@@ -537,7 +537,7 @@ int    test23(void) { return '\x3'; }
 int test24(void) { return L'\x3'; }
 int test25(void) { return L'\x333'; }
     |};
-[%expect {|
+  [%expect {|
   ((Function
     ((returns (Nonunique (Eq Int ())))
      (declarator
@@ -855,7 +855,7 @@ void bla1() {
 }
 
     |};
-[%expect {|
+  [%expect {|
   ((Function
     ((returns (Unique (Eq Void ())))
      (declarator
@@ -881,7 +881,7 @@ int f (int z) {
   return 0;
 }
     |};
-[%expect {|
+  [%expect {|
   ((Function
     ((returns (Nonunique (Eq Int ())))
      (declarator
@@ -935,7 +935,7 @@ int f(void) {
   return 1;
 }
     |};
-[%expect {|
+  [%expect {|
   ((Function
     ((returns (Nonunique (Eq Int ())))
      (declarator
@@ -974,7 +974,7 @@ void f(void) {
   x = 0;
 }
     |};
-[%expect {|
+  [%expect {|
   ((Declaration
     (Typedef (specifiers (Nonunique (A Typedef (Eq Int ()))))
      (declarators ((Plain (Identifier T))))))
@@ -1020,7 +1020,7 @@ void f(void) {
   x = 0;
 }
     |};
-[%expect {|
+  [%expect {|
   ((Declaration
     (Typedef (specifiers (Nonunique (A Typedef (Eq Int ()))))
      (declarators ((Plain (Identifier T))))))
@@ -1074,7 +1074,7 @@ void f(void) {
       }
 }
     |};
-[%expect.unreachable]
+  [%expect.unreachable]
 [@@expect.uncaught_exn {| ("Syntax error at line 9, column 11: 'The last token was expected to be a typedef name, but it is a variable name.' (last token: (VARIABLE T), current token: (NAME x), state: 425)") |}]
 
 
@@ -1091,7 +1091,7 @@ void f (void) {
   T = 1;
 }
     |};
-[%expect {|
+  [%expect {|
   ((Declaration
     (Typedef (specifiers (Nonunique (A Typedef (Eq Int ()))))
      (declarators ((Plain (Identifier T))))))
@@ -1162,7 +1162,7 @@ enum E11 { A1 = 1,};
 
 int PR20634 = sizeof(struct { int n; } [5]);
     |};
-[%expect {|
+  [%expect {|
   ((Declaration
     (Normal
      (specifiers (Nonunique (B (Storage_class_specifier Extern) (Eq Int ()))))
@@ -1403,7 +1403,7 @@ void f(void) {
     // denotes a variable.
 }
     |};
-[%expect {|
+  [%expect {|
   ((Declaration
     (Typedef (specifiers (Nonunique (A Typedef (Eq Int ()))))
      (declarators
@@ -1476,7 +1476,7 @@ struct foo Y[10] = {
   /* [4] .arr [2] 4  // expected-error {{expected '=' or another designator}} */
 };
     |};
-[%expect {|
+  [%expect {|
   ((Declaration
     (Normal (specifiers (Nonunique (Eq Int ())))
      (init_declarators
@@ -1527,7 +1527,7 @@ typedef enum { a, b = a } foo;
 // Each enumeration constant has scope that begins just after the
 // appearance of its defining enumerator in an enumerator list.
     |};
-[%expect {|
+  [%expect {|
   ((Declaration
     (Typedef
      (specifiers
@@ -1552,7 +1552,7 @@ void f(void) {
   int y = U - T;
 }
     |};
-[%expect {|
+  [%expect {|
   ((Declaration
     (Typedef (specifiers (Nonunique (A Typedef (Eq Int ()))))
      (declarators ((Plain (Identifier T))))))
@@ -1615,7 +1615,7 @@ void f(void) {
   x = (int)T;
 }
     |};
-[%expect {|
+  [%expect {|
   ((Declaration
     (Typedef (specifiers (Nonunique (A Typedef (Eq Int ()))))
      (declarators ((Plain (Identifier T))))))
@@ -1675,7 +1675,7 @@ int main(int argc, char *argv[]) {
 // Each enumeration constant has scope that begins just after the
 // appearance of its defining enumerator in an enumerator list.
     |};
-[%expect {|
+  [%expect {|
   ((Declaration
     (Normal (specifiers (Nonunique (Eq Int ())))
      (init_declarators
@@ -1783,7 +1783,7 @@ void test_sizeof(){
   (void)sizeof(arr)[0];
 }
     |};
-[%expect {|
+  [%expect {|
   ((Function
     ((returns (Unique (Eq Void ())))
      (declarator
@@ -2012,7 +2012,7 @@ void foo() {
   X = sizeof(void (*(*)(int arga, void (*argb)(double Y)))(void* Z));
 }
     |};
-[%expect {|
+  [%expect {|
   ((Function
     ((returns (Unique (Eq Void ())))
      (declarator
@@ -2107,7 +2107,7 @@ enum {V} (*f(T T, enum {U} y, int x[T+U]))(T t);
   // (long, enum{U}, ptr(int)) -> ptr (long -> enum{V})
 T x[(U)V+1]; // T and U again denote types; V remains visible
     |};
-[%expect {|
+  [%expect {|
   ((Declaration
     (Typedef (specifiers (Nonunique (A Typedef (Eq Long ()))))
      (declarators ((Plain (Identifier T)) (Plain (Identifier U))))))
@@ -2177,7 +2177,7 @@ enum {V} (*f(T T, enum {U} y, int x[T+U]))(T t) {
   return 0;
 }
     |};
-[%expect {|
+  [%expect {|
   ((Declaration
     (Typedef (specifiers (Nonunique (A Typedef (Eq Long ()))))
      (declarators ((Plain (Identifier T)) (Plain (Identifier U))))))
@@ -2261,7 +2261,7 @@ void f(void) {
   T t; U u;
 }
     |};
-[%expect {|
+  [%expect {|
   ((Declaration
     (Typedef (specifiers (Nonunique (A Typedef (Eq Int ()))))
      (declarators ((Plain (Identifier T)) (Plain (Identifier U))))))
@@ -2353,7 +2353,7 @@ void f(void) {
   T x = 1; // T is a type again
 }
     |};
-[%expect {|
+  [%expect {|
   ((Declaration
     (Typedef (specifiers (Nonunique (A Typedef (Eq Int ()))))
      (declarators ((Plain (Identifier T))))))
@@ -2406,7 +2406,7 @@ void f(void) {
   x2 = 0;
 }
     |};
-[%expect {|
+  [%expect {|
   ((Declaration
     (Typedef (specifiers (Nonunique (A Typedef (Eq Int ()))))
      (declarators ((Plain (Identifier T1))))))
@@ -2448,7 +2448,7 @@ typedef struct {
   long long foo;
 } mystruct;
     |};
-[%expect {|
+  [%expect {|
   ((Declaration
     (Typedef
      (specifiers
@@ -2484,7 +2484,7 @@ void f(void) {
   T u3; U u4;
 }
     |};
-[%expect {|
+  [%expect {|
   ((Declaration
     (Typedef (specifiers (Nonunique (A Typedef (Eq Int ()))))
      (declarators ((Plain (Identifier T)) (Plain (Identifier U))))))
@@ -2623,7 +2623,7 @@ void f(void) {
   S ss = 1; T tt = 1; U uu = 1;
 }
     |};
-[%expect {|
+  [%expect {|
   ((Declaration
     (Typedef (specifiers (Nonunique (A Typedef (Eq Int ()))))
      (declarators
@@ -2720,7 +2720,7 @@ int f(void) {
   x = T + U + V;
 }
     |};
-[%expect {|
+  [%expect {|
   ((Declaration
     (Typedef (specifiers (Nonunique (A Typedef (Eq Int ()))))
      (declarators
@@ -2793,7 +2793,7 @@ void f(int(x), int(T), int T);
 // Second parameter: anonymous, of type int(T) (i.e., T -> int)
 // Third parameter: named T, of type int
     |};
-[%expect {|
+  [%expect {|
   ((Declaration
     (Typedef (specifiers (Nonunique (A Typedef (Eq Int ()))))
      (declarators ((Plain (Identifier T))))))
@@ -2829,7 +2829,7 @@ typedef int T;
 
 void f(int(T), T x);
     |};
-[%expect {|
+  [%expect {|
   ((Declaration
     (Typedef (specifiers (Nonunique (A Typedef (Eq Int ()))))
      (declarators ((Plain (Identifier T))))))
@@ -2898,7 +2898,7 @@ void test5() {
   if (0);
 }
     |};
-[%expect {|
+  [%expect {|
   ((Function
     ((returns (Unique (Eq Void ())))
      (declarator
@@ -3075,7 +3075,7 @@ struct s2 { struct s1 *B; };
 struct s1 a;
 struct s2 b;
     |};
-[%expect {|
+  [%expect {|
   ((Declaration
     (Normal
      (specifiers
@@ -3129,7 +3129,7 @@ void f(void) {
   T * b;
 }
     |};
-[%expect {|
+  [%expect {|
   ((Declaration
     (Typedef (specifiers (Nonunique (A Typedef (Eq Int ()))))
      (declarators ((Plain (Identifier T))))))
@@ -3162,7 +3162,7 @@ void test() {
    foo->x = 0;
 }
     |};
-[%expect {|
+  [%expect {|
   ((Declaration
     (Typedef (specifiers (Nonunique (A Typedef (Eq Int ()))))
      (declarators ((Plain (Identifier X))))))
@@ -3217,7 +3217,7 @@ void f(void) {
   T * b;
 }
     |};
-[%expect {|
+  [%expect {|
   ((Declaration
     (Normal (specifiers (Nonunique (Eq Int ())))
      (init_declarators ((Plain (Identifier T)) (Plain (Identifier b))))))

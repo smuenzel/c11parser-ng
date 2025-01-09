@@ -36,9 +36,9 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 (* K&R function declarators are considered part of "other" declarators. *)
 
 type 'context declarator_kind =
-| DeclaratorIdentifier
-| DeclaratorFunction of 'context
-| DeclaratorOther
+  | DeclaratorIdentifier
+  | DeclaratorFunction of 'context
+  | DeclaratorOther
 
 (* With a declarator, we associate two pieces of information: 1- the
    identifier that is being declared; 2- the declarator's kind, as

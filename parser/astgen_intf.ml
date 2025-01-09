@@ -238,7 +238,7 @@ module type S = sig
     val comma : t' * t' -> t
     val struct_initializer : Struct_initializer.t -> t
   end
-   
+
   and Alignment_specifier : sig
     type t
     val alignas_type : Type_name.t -> t
