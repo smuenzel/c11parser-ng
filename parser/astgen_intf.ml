@@ -65,6 +65,92 @@ module type S = sig
     val complex : t
   end
 
+  module Struct_or_union : sig
+    type t
+    val struct_ : t
+    val union : t
+  end
+
+  module Equality_operator : sig
+    type t
+    val equal : t
+    val not_equal : t
+  end
+
+  module Relational_operator : sig
+    type t
+    val less : t
+    val greater : t
+    val less_equal : t
+    val greater_equal : t
+  end
+
+  module Shift_operator : sig
+    type t
+    val left : t
+    val right : t
+  end
+
+  module Additive_operator : sig
+    type t
+    val plus : t
+    val minus : t
+  end
+
+  module Multiplicative_operator : sig
+    type t
+    val multiply : t
+    val divide : t
+    val modulo : t
+  end
+
+  module Logical_operator : sig
+    type t
+    val logical_and : t
+    val logical_or : t
+  end
+
+  module Bitwise_operator : sig
+    type t
+    val bitwise_and : t
+    val bitwise_xor : t
+    val bitwise_or : t
+  end
+
+  module Assignment_operator : sig
+    type t
+    val plain : t
+    val bitwise : Bitwise_operator.t -> t
+    val multiplicative : Multiplicative_operator.t -> t
+    val additive : Additive_operator.t -> t
+    val shift : Shift_operator.t -> t
+  end
+
+  module Unary_operator : sig
+    type t
+    val address_of : t
+    val dereference : t
+    val plus : t
+    val minus : t
+    val logical_not : t
+    val bitwise_not : t
+    val sizeof : t
+    val preincrement : t
+    val predecrement : t
+    val postincrement : t
+    val postdecrement : t
+  end
+
+  module Constant : sig
+    type t
+
+    val char : Literal.Char.t -> t
+    val string : Literal.String.t -> t
+    val integer : string -> t
+    val decimal_floating : string -> t
+    val hexadecimal_floating : string -> t
+  end
+
   module rec Enum_constant : sig
     type t
 
@@ -88,98 +174,12 @@ module type S = sig
     val name : Typedef_name.t -> t
   end
 
-  and Struct_or_union : sig
-    type t
-    val struct_ : t
-    val union : t
-  end
-
   and Struct_or_union_specifier : sig
     type t
 
     val named : Struct_or_union.t * General_identifier.t -> t
 
     val defined : Struct_or_union.t * General_identifier.t option * Struct_declaration.t list -> t
-  end
-
-  and Equality_operator : sig
-    type t
-    val equal : t
-    val not_equal : t
-  end
-
-  and Relational_operator : sig
-    type t
-    val less : t
-    val greater : t
-    val less_equal : t
-    val greater_equal : t
-  end
-
-  and Shift_operator : sig
-    type t
-    val left : t
-    val right : t
-  end
-
-  and Additive_operator : sig
-    type t
-    val plus : t
-    val minus : t
-  end
-
-  and Multiplicative_operator : sig
-    type t
-    val multiply : t
-    val divide : t
-    val modulo : t
-  end
-
-  and Logical_operator : sig
-    type t
-    val logical_and : t
-    val logical_or : t
-  end
-
-  and Bitwise_operator : sig
-    type t
-    val bitwise_and : t
-    val bitwise_xor : t
-    val bitwise_or : t
-  end
-
-  and Assignment_operator : sig
-    type t
-    val plain : t
-    val bitwise : Bitwise_operator.t -> t
-    val multiplicative : Multiplicative_operator.t -> t
-    val additive : Additive_operator.t -> t
-    val shift : Shift_operator.t -> t
-  end
-
-  and Unary_operator : sig
-    type t
-    val address_of : t
-    val dereference : t
-    val plus : t
-    val minus : t
-    val logical_not : t
-    val bitwise_not : t
-    val sizeof : t
-    val preincrement : t
-    val predecrement : t
-    val postincrement : t
-    val postdecrement : t
-  end
-
-  and Constant : sig
-    type t
-
-    val char : Literal.Char.t -> t
-    val string : Literal.String.t -> t
-    val integer : string -> t
-    val decimal_floating : string -> t
-    val hexadecimal_floating : string -> t
   end
 
   and Generic_association : sig

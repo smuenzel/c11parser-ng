@@ -1,0 +1,6 @@
+(library
+  (name model_ast)
+  (public_name c11parser_ng.model_ast)
+  (libraries c11parser c11lexer base core_kernel)
+  (preprocess (pps ppx_sexp_conv ppx_bin_prot ppx_gen_rec ppx_jane))
+  )
