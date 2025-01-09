@@ -2,7 +2,7 @@ open Base
 open Core
 
 module type Located = sig
-  type 'a t [@@deriving sexp, bin_io, compare, hash]
+  type 'a t [@@deriving sexp, compare, hash]
   val locate : start:Lexing.position -> end_:Lexing.position -> 'a -> 'a t
 end
 
@@ -13,7 +13,7 @@ module General_identifier = String_id.Make(struct let module_name = "General_ide
 module Typedef = struct
   type t =
     | Typedef
-  [@@deriving sexp, bin_io, compare, hash, variants]
+  [@@deriving sexp, compare, hash, variants]
 end
 
 module Type_qualifier = struct
@@ -22,7 +22,7 @@ module Type_qualifier = struct
     | Restrict
     | Volatile
     | Atomic
-  [@@deriving sexp, bin_io, compare, hash, variants]
+  [@@deriving sexp, compare, hash, variants]
 end
 
 module Storage_class_specifier = struct
@@ -32,14 +32,14 @@ module Storage_class_specifier = struct
     | Thread_local
     | Auto
     | Register
-  [@@deriving sexp, bin_io, compare, hash, variants]
+  [@@deriving sexp, compare, hash, variants]
 end
 
 module Function_specifier = struct
   type t =
     | Inline
     | Noreturn
-  [@@deriving sexp, bin_io, compare, hash, variants]
+  [@@deriving sexp, compare, hash, variants]
 end
 
 module Type_specifier_nonunique = struct
@@ -53,21 +53,21 @@ module Type_specifier_nonunique = struct
     | Signed
     | Unsigned
     | Complex
-  [@@deriving sexp, bin_io, compare, hash, variants]
+  [@@deriving sexp, compare, hash, variants]
 end
 
 module Struct_or_union = struct
   type t =
     | Struct
     | Union
-  [@@deriving sexp, bin_io, compare, hash, variants]
+  [@@deriving sexp, compare, hash, variants]
 end
 
 module Equality_operator = struct
   type t =
     | Equal
     | Not_equal
-  [@@deriving sexp, bin_io, compare, hash, variants]
+  [@@deriving sexp, compare, hash, variants]
 end
 
 module Relational_operator = struct
@@ -76,21 +76,21 @@ module Relational_operator = struct
     | Greater
     | Less_equal
     | Greater_equal
-  [@@deriving sexp, bin_io, compare, hash, variants]
+  [@@deriving sexp, compare, hash, variants]
 end
 
 module Shift_operator = struct
   type t =
     | Left
     | Right
-  [@@deriving sexp, bin_io, compare, hash, variants]
+  [@@deriving sexp, compare, hash, variants]
 end
 
 module Additive_operator = struct
   type t =
     | Plus
     | Minus
-  [@@deriving sexp, bin_io, compare, hash, variants]
+  [@@deriving sexp, compare, hash, variants]
 end
 
 module Multiplicative_operator = struct
@@ -98,14 +98,14 @@ module Multiplicative_operator = struct
     | Multiply
     | Divide
     | Modulo
-  [@@deriving sexp, bin_io, compare, hash, variants]
+  [@@deriving sexp, compare, hash, variants]
 end
 
 module Logical_operator = struct
   type t =
     | Logical_and
     | Logical_or
-  [@@deriving sexp, bin_io, compare, hash, variants]
+  [@@deriving sexp, compare, hash, variants]
 end
 
 module Bitwise_operator = struct
@@ -113,7 +113,7 @@ module Bitwise_operator = struct
     | Bitwise_and
     | Bitwise_xor
     | Bitwise_or
-  [@@deriving sexp, bin_io, compare, hash, variants]
+  [@@deriving sexp, compare, hash, variants]
 end
 
 module Assignment_operator = struct
@@ -123,7 +123,7 @@ module Assignment_operator = struct
     | Additive of Additive_operator.t
     | Multiplicative of Multiplicative_operator.t
     | Shift of Shift_operator.t
-  [@@deriving sexp, bin_io, compare, hash, variants]
+  [@@deriving sexp, compare, hash, variants]
 end
 
 module Unary_operator = struct
@@ -139,7 +139,7 @@ module Unary_operator = struct
     | Predecrement
     | Postincrement
     | Postdecrement
-  [@@deriving sexp, bin_io, compare, hash, variants]
+  [@@deriving sexp, compare, hash, variants]
 end
 
 module Literal = struct
@@ -151,7 +151,7 @@ module Literal = struct
         | `U16
         | `U32
         ]
-      [@@deriving sexp, bin_io, compare, hash]
+      [@@deriving sexp, compare, hash]
     end
 
     module Element = struct
@@ -161,13 +161,13 @@ module Literal = struct
         | Octal of string
         | Escape of char
         | Plain of Uchar.t
-      [@@deriving sexp, bin_io, compare, hash, variants]
+      [@@deriving sexp, compare, hash, variants]
     end
 
     type t =
       { kind : Kind.t
       ; value : Element.t list
-      } [@@deriving sexp, bin_io, compare, hash]
+      } [@@deriving sexp, compare, hash]
   end
 
   module String = struct
@@ -179,17 +179,17 @@ module Literal = struct
         | `U16
         | `U32
         ]
-      [@@deriving sexp, bin_io, compare, hash]
+      [@@deriving sexp, compare, hash]
     end
 
     module Segment = struct
       type t = C11lexer.Literal.String.Segment.t =
         { kind : Kind.t
         ; value : Char.Element.t list
-        } [@@deriving sexp, bin_io, compare, hash]
+        } [@@deriving sexp, compare, hash]
     end
 
-    type t = Segment.t list [@@deriving sexp, bin_io, compare, hash]
+    type t = Segment.t list [@@deriving sexp, compare, hash]
   end
 end
 
@@ -200,11 +200,11 @@ module Constant = struct
     | Integer of string
     | Decimal_floating of string
     | Hexadecimal_floating of string
-  [@@deriving sexp, bin_io, compare, hash]
+  [@@deriving sexp, compare, hash]
 end
 
 module Make(L : Located) = struct
-  type 'a located = 'a L.t [@@deriving sexp, bin_io, compare, hash]
+  type 'a located = 'a L.t [@@deriving sexp, compare, hash]
   let locate = L.locate
 
   module Var_name = Var_name
@@ -232,7 +232,7 @@ module Make(L : Located) = struct
     type t =
       { name : General_identifier.t
       ; value : Expr.t located option
-      } [@@deriving sexp, bin_io, compare, hash]
+      } [@@deriving sexp, compare, hash]
   end = Enum_constant
 
   and Enum : sig
@@ -242,7 +242,7 @@ module Make(L : Located) = struct
           { name : General_identifier.t option
           ; values : Enum_constant.t list
           }
-      [@@deriving sexp, bin_io, compare, hash, variants]
+      [@@deriving sexp, compare, hash, variants]
   end = Enum
 
   and Type_specifier_unique : sig
@@ -253,7 +253,7 @@ module Make(L : Located) = struct
       | Enum of Enum.t
       | Struct_or_union of Struct_or_union_specifier.t
       | Name of Typedef_name.t
-    [@@deriving sexp, bin_io, compare, hash, variants]
+    [@@deriving sexp, compare, hash]
   end = Type_specifier_unique
 
   and Struct_or_union_specifier : sig
@@ -263,21 +263,21 @@ module Make(L : Located) = struct
                    ; name : General_identifier.t option
                    ; declaration : Struct_declaration.t list
                    }
-    [@@deriving sexp, bin_io, compare, hash, variants]
+    [@@deriving sexp, compare, hash, variants]
   end = Struct_or_union_specifier
 
   and Generic_association : sig
     type t =
       | Default of Expr.t located
       | Named of { name : Type_name.t; value : Expr.t located }
-    [@@deriving sexp, bin_io, compare, hash, variants]
+    [@@deriving sexp, compare, hash, variants]
   end = Generic_association
 
   and Generic_selection : sig
     type t =
       { discriminant : Expr.t located
       ; associations : Generic_association.t list
-      } [@@deriving sexp, bin_io, compare, hash]
+      } [@@deriving sexp, compare, hash]
   end = Generic_selection
 
   and Expr : sig
@@ -291,7 +291,7 @@ module Make(L : Located) = struct
         | Logical of Logical_operator.t
         | Bitwise of Bitwise_operator.t
         | Assignment of Assignment_operator.t
-        [@@deriving sexp, bin_io, compare, hash, variants]
+        [@@deriving sexp, compare, hash, variants]
     end
     type t =
       | Binary of
@@ -337,26 +337,26 @@ module Make(L : Located) = struct
       | Generic of Generic_selection.t
 
       | Comma of t located * t located
-    [@@deriving sexp, bin_io, compare, hash, variants]
+    [@@deriving sexp, compare, hash, variants]
   end = Expr
 
   and Alignment_specifier : sig
     type t =
       | Type of Type_name.t
       | Expr of Expr.t located
-    [@@deriving sexp, bin_io, compare, hash, variants]
+    [@@deriving sexp, compare, hash, variants]
   end = Alignment_specifier
 
   and Qualifier_or_alignment : sig
     type t = (Type_qualifier.t, Alignment_specifier.t) Either.t
-        [@@deriving sexp, bin_io, compare, hash]
+        [@@deriving sexp, compare, hash]
   end = Qualifier_or_alignment
 
   and Specifier_qualifier_list : sig
     type t =
       | Unique of (Type_specifier_unique.t, Qualifier_or_alignment.t) Util.List_eq1.t
       | Nonunique of (Type_specifier_nonunique.t, Qualifier_or_alignment.t) Util.List_ge1.t
-    [@@deriving sexp, bin_io, compare, hash, variants]
+    [@@deriving sexp, compare, hash, variants]
   end = Specifier_qualifier_list
 
   and Declaration_specifier : sig
@@ -365,21 +365,21 @@ module Make(L : Located) = struct
       | Type_qualifier of Type_qualifier.t
       | Function_specifier of Function_specifier.t
       | Alignment_specifier of Alignment_specifier.t
-    [@@deriving sexp, bin_io, compare, hash, variants]
+    [@@deriving sexp, compare, hash, variants]
   end = Declaration_specifier
 
   and Declaration_specifiers : sig
     type t =
       | Unique of (Type_specifier_unique.t, Declaration_specifier.t) Util.List_eq1.t
       | Nonunique of (Type_specifier_nonunique.t, Declaration_specifier.t) Util.List_ge1.t
-    [@@deriving sexp, bin_io, compare, hash, variants]
+    [@@deriving sexp, compare, hash, variants]
   end = Declaration_specifiers
 
   and Declaration_specifiers_typedef : sig
     type t =
       | Unique of (Typedef.t, Type_specifier_unique.t, Declaration_specifier.t) Util.List_eq1_eq1.t
       | Nonunique of (Typedef.t, Type_specifier_nonunique.t, Declaration_specifier.t) Util.List_eq1_ge1.t
-    [@@deriving sexp, bin_io, compare, hash, variants]
+    [@@deriving sexp, compare, hash, variants]
   end = Declaration_specifiers_typedef
 
   and Init_declarator : sig
@@ -389,7 +389,7 @@ module Make(L : Located) = struct
           { declarator : 'a
           ; initializer_ : C_initializer.t
           } 
-    [@@deriving sexp, bin_io, compare, hash, variants]
+    [@@deriving sexp, compare, hash, variants]
   end = Init_declarator
 
   and Pointer : sig
@@ -400,7 +400,7 @@ module Make(L : Located) = struct
           ; inner : t
           }
       | Pointer of t
-      [@@deriving sexp, bin_io, compare, hash, variants]
+      [@@deriving sexp, compare, hash, variants]
   end = Pointer
 
   and Declarator : sig
@@ -429,7 +429,7 @@ module Make(L : Located) = struct
           ; parameters :
               (Parameter_type_list.t, Var_name.t list option) Either.t
           }
-    [@@deriving sexp, bin_io, compare, hash, variants]
+    [@@deriving sexp, compare, hash, variants]
   end = Declarator
 
   and Abstract_declarator : sig
@@ -439,8 +439,7 @@ module Make(L : Located) = struct
           { pointer : Pointer.t option
           ; direct : Direct_abstract_declarator.t
           }
-    [@@deriving sexp, bin_io, compare, hash, variants]
-
+    [@@deriving sexp, compare, hash]
   end = Abstract_declarator
 
   and Direct_abstract_declarator : sig
@@ -461,14 +460,14 @@ module Make(L : Located) = struct
           { declarator : t option
           ; parameters : Parameter_type_list.t
           }
-    [@@deriving sexp, bin_io, compare, hash, variants]
+    [@@deriving sexp, compare, hash, variants]
   end = Direct_abstract_declarator
 
   and Parameter_type_list : sig
     type t =
       { declarations : Parameter_declaration.t list
       ; ellipsis : bool
-      } [@@deriving sexp, bin_io, compare, hash]
+      } [@@deriving sexp, compare, hash]
   end = Parameter_type_list
 
   and Parameter_declaration : sig
@@ -481,7 +480,7 @@ module Make(L : Located) = struct
           { specifier : Declaration_specifier.t
           ; declarator : Abstract_declarator.t option
           }
-      [@@deriving sexp, bin_io, compare, hash, variants]
+      [@@deriving sexp, compare, hash, variants]
   end = Parameter_declaration
 
   and Struct_declarator : sig
@@ -491,7 +490,7 @@ module Make(L : Located) = struct
           { declarator : Declarator.t option
           ; size : Expr.t located
           }
-    [@@deriving sexp, bin_io, compare, hash, variants]
+    [@@deriving sexp, compare, hash, variants]
   end = Struct_declarator
 
   and Struct_declaration : sig
@@ -501,17 +500,17 @@ module Make(L : Located) = struct
           ; declarators : Struct_declarator.t list
           }
       | Static_assert of unit
-    [@@deriving sexp, bin_io, compare, hash, variants]
+    [@@deriving sexp, compare, hash, variants]
   end = Struct_declaration
 
   and Compound_statement : sig
     type t = Block_item.t list
-    [@@deriving sexp, bin_io, compare, hash]
+    [@@deriving sexp, compare, hash]
   end = Compound_statement
 
   and Expression_statement : sig
     type t = Expr.t located option
-    [@@deriving sexp, bin_io, compare, hash]
+    [@@deriving sexp, compare, hash]
   end = Expression_statement
 
   and Selection_statement : sig
@@ -525,7 +524,7 @@ module Make(L : Located) = struct
           { condition : Expr.t located
           ; body : Statement.t located
           }
-    [@@deriving sexp, bin_io, compare, hash, variants]
+    [@@deriving sexp, compare, hash]
   end = Selection_statement
 
   and Labeled_statement : sig
@@ -541,7 +540,7 @@ module Make(L : Located) = struct
       | Default of
           { statement : Statement.t located
           }
-    [@@deriving sexp, bin_io, compare, hash, variants]
+    [@@deriving sexp, compare, hash]
   end = Labeled_statement
 
   and Iteration_statement : sig
@@ -566,7 +565,7 @@ module Make(L : Located) = struct
           ; increment : Expr.t located option
           ; body : Statement.t located
           }
-    [@@deriving sexp, bin_io, compare, hash, variants]
+    [@@deriving sexp, compare, hash, variants]
   end = Iteration_statement
 
   and Jump_statement : sig
@@ -575,14 +574,14 @@ module Make(L : Located) = struct
       | Continue
       | Return of Expr.t located option
       | Goto of General_identifier.t
-    [@@deriving sexp, bin_io, compare, hash, variants]
+    [@@deriving sexp, compare, hash, variants]
   end = Jump_statement
 
   and Block_item : sig
     type t =
       | Declaration of Declaration.t located
       | Statement of Statement.t located
-    [@@deriving sexp, bin_io, compare, hash, variants]
+    [@@deriving sexp, compare, hash, variants]
   end = Block_item
 
   and Statement : sig
@@ -593,7 +592,7 @@ module Make(L : Located) = struct
       | Labeled of Labeled_statement.t
       | Iteration of Iteration_statement.t
       | Jump of Jump_statement.t
-    [@@deriving sexp, bin_io, compare, hash, variants]
+    [@@deriving sexp, compare, hash]
   end = Statement
 
   and Declaration : sig
@@ -606,35 +605,35 @@ module Make(L : Located) = struct
           { specifier : Declaration_specifiers_typedef.t
           ; declarator : Declarator.t Init_declarator.t list
           }
-    [@@deriving sexp, bin_io, compare, hash, variants]
+    [@@deriving sexp, compare, hash, variants]
   end = Declaration
 
   and Type_name : sig
     type t =
       { specifier_qualifiers : Specifier_qualifier_list.t
       ; abstract_declarator : Abstract_declarator.t option
-      } [@@deriving sexp, bin_io, compare, hash]
+      } [@@deriving sexp, compare, hash]
   end = Type_name
       
   and Static_assert_declaration : sig
     type t =
       { condition : Expr.t located
       ; message : Literal.String.t
-      } [@@deriving sexp, bin_io, compare, hash]
+      } [@@deriving sexp, compare, hash]
   end = Static_assert_declaration
 
   and C_initializer : sig
     type t =
       | Expression of Expr.t located
       | Initializer_list of (Designator.t list * C_initializer.t) list
-    [@@deriving sexp, bin_io, compare, hash, variants]
+    [@@deriving sexp, compare, hash]
   end = C_initializer
 
   and Designator : sig
     type t =
       | Field of General_identifier.t
       | Subscript of Expr.t located
-    [@@deriving sexp, bin_io, compare, hash, variants]
+    [@@deriving sexp, compare, hash, variants]
   end = Designator
 
 end
