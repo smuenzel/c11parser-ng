@@ -48,7 +48,7 @@ void blah(int foo) {
        (A Typedef (Eq (Struct_or_union (Named (kind Struct) (name foo))) ()))))
      (declarators ((Plain (Identifier foo))))))
    (Function
-    ((specifiers (Unique (Eq Void ())))
+    ((returns (Unique (Eq Void ())))
      (declarator
       (Function (declarator (Identifier blah))
        (parameters
@@ -328,7 +328,7 @@ int f(struct S s) {
         ())))
      (init_declarators ())))
    (Function
-    ((specifiers (Nonunique (Eq Int ())))
+    ((returns (Nonunique (Eq Int ())))
      (declarator
       (Function (declarator (Identifier f))
        (parameters
@@ -375,7 +375,7 @@ int f(struct S s) {
         ())))
      (init_declarators ())))
    (Function
-    ((specifiers (Nonunique (Eq Int ())))
+    ((returns (Nonunique (Eq Int ())))
      (declarator
       (Function (declarator (Identifier f))
        (parameters
@@ -414,7 +414,7 @@ void f(void) {
     (Normal (specifiers (Nonunique (Eq Int ())))
      (init_declarators ((Plain (Identifier x))))))
    (Function
-    ((specifiers (Unique (Eq Void ())))
+    ((returns (Unique (Eq Void ())))
      (declarator
       (Function (declarator (Identifier f))
        (parameters
@@ -539,7 +539,7 @@ int test25(void) { return L'\x333'; }
     |};
 [%expect {|
   ((Function
-    ((specifiers (Nonunique (Eq Int ())))
+    ((returns (Nonunique (Eq Int ())))
      (declarator
       (Function (declarator (Identifier test1))
        (parameters
@@ -553,7 +553,7 @@ int test25(void) { return L'\x333'; }
         (Jump
          (Return ((Constant (Char ((kind Plain) (value ((Escape "\\"))))))))))))))
    (Function
-    ((specifiers (Nonunique (Eq Int ())))
+    ((returns (Nonunique (Eq Int ())))
      (declarator
       (Function (declarator (Identifier test2))
        (parameters
@@ -567,7 +567,7 @@ int test25(void) { return L'\x333'; }
         (Jump
          (Return ((Constant (Char ((kind Wide) (value ((Escape "\\"))))))))))))))
    (Function
-    ((specifiers (Nonunique (Eq Int ())))
+    ((returns (Nonunique (Eq Int ())))
      (declarator
       (Function (declarator (Identifier test3))
        (parameters
@@ -580,7 +580,7 @@ int test25(void) { return L'\x333'; }
       ((Statement
         (Jump (Return ((Constant (Char ((kind Plain) (value ((Escape '))))))))))))))
    (Function
-    ((specifiers (Nonunique (Eq Int ())))
+    ((returns (Nonunique (Eq Int ())))
      (declarator
       (Function (declarator (Identifier test4))
        (parameters
@@ -593,7 +593,7 @@ int test25(void) { return L'\x333'; }
       ((Statement
         (Jump (Return ((Constant (Char ((kind Wide) (value ((Escape '))))))))))))))
    (Function
-    ((specifiers (Nonunique (Eq Int ())))
+    ((returns (Nonunique (Eq Int ())))
      (declarator
       (Function (declarator (Identifier test5))
        (parameters
@@ -606,7 +606,7 @@ int test25(void) { return L'\x333'; }
       ((Statement
         (Jump (Return ((Constant (Char ((kind Plain) (value ((Escape a))))))))))))))
    (Function
-    ((specifiers (Nonunique (Eq Int ())))
+    ((returns (Nonunique (Eq Int ())))
      (declarator
       (Function (declarator (Identifier test6))
        (parameters
@@ -619,7 +619,7 @@ int test25(void) { return L'\x333'; }
       ((Statement
         (Jump (Return ((Constant (Char ((kind Wide) (value ((Escape a))))))))))))))
    (Function
-    ((specifiers (Nonunique (Eq Int ())))
+    ((returns (Nonunique (Eq Int ())))
      (declarator
       (Function (declarator (Identifier test7))
        (parameters
@@ -632,7 +632,7 @@ int test25(void) { return L'\x333'; }
       ((Statement
         (Jump (Return ((Constant (Char ((kind Plain) (value ((Escape b))))))))))))))
    (Function
-    ((specifiers (Nonunique (Eq Int ())))
+    ((returns (Nonunique (Eq Int ())))
      (declarator
       (Function (declarator (Identifier test8))
        (parameters
@@ -645,7 +645,7 @@ int test25(void) { return L'\x333'; }
       ((Statement
         (Jump (Return ((Constant (Char ((kind Wide) (value ((Escape b))))))))))))))
    (Function
-    ((specifiers (Nonunique (Eq Int ())))
+    ((returns (Nonunique (Eq Int ())))
      (declarator
       (Function (declarator (Identifier test11))
        (parameters
@@ -658,7 +658,7 @@ int test25(void) { return L'\x333'; }
       ((Statement
         (Jump (Return ((Constant (Char ((kind Plain) (value ((Escape f))))))))))))))
    (Function
-    ((specifiers (Nonunique (Eq Int ())))
+    ((returns (Nonunique (Eq Int ())))
      (declarator
       (Function (declarator (Identifier test12))
        (parameters
@@ -671,7 +671,7 @@ int test25(void) { return L'\x333'; }
       ((Statement
         (Jump (Return ((Constant (Char ((kind Wide) (value ((Escape f))))))))))))))
    (Function
-    ((specifiers (Nonunique (Eq Int ())))
+    ((returns (Nonunique (Eq Int ())))
      (declarator
       (Function (declarator (Identifier test13))
        (parameters
@@ -684,7 +684,7 @@ int test25(void) { return L'\x333'; }
       ((Statement
         (Jump (Return ((Constant (Char ((kind Plain) (value ((Escape n))))))))))))))
    (Function
-    ((specifiers (Nonunique (Eq Int ())))
+    ((returns (Nonunique (Eq Int ())))
      (declarator
       (Function (declarator (Identifier test14))
        (parameters
@@ -697,7 +697,7 @@ int test25(void) { return L'\x333'; }
       ((Statement
         (Jump (Return ((Constant (Char ((kind Wide) (value ((Escape n))))))))))))))
    (Function
-    ((specifiers (Nonunique (Eq Int ())))
+    ((returns (Nonunique (Eq Int ())))
      (declarator
       (Function (declarator (Identifier test15))
        (parameters
@@ -710,7 +710,7 @@ int test25(void) { return L'\x333'; }
       ((Statement
         (Jump (Return ((Constant (Char ((kind Plain) (value ((Escape r))))))))))))))
    (Function
-    ((specifiers (Nonunique (Eq Int ())))
+    ((returns (Nonunique (Eq Int ())))
      (declarator
       (Function (declarator (Identifier test16))
        (parameters
@@ -723,7 +723,7 @@ int test25(void) { return L'\x333'; }
       ((Statement
         (Jump (Return ((Constant (Char ((kind Wide) (value ((Escape r))))))))))))))
    (Function
-    ((specifiers (Nonunique (Eq Int ())))
+    ((returns (Nonunique (Eq Int ())))
      (declarator
       (Function (declarator (Identifier test17))
        (parameters
@@ -736,7 +736,7 @@ int test25(void) { return L'\x333'; }
       ((Statement
         (Jump (Return ((Constant (Char ((kind Plain) (value ((Escape t))))))))))))))
    (Function
-    ((specifiers (Nonunique (Eq Int ())))
+    ((returns (Nonunique (Eq Int ())))
      (declarator
       (Function (declarator (Identifier test18))
        (parameters
@@ -749,7 +749,7 @@ int test25(void) { return L'\x333'; }
       ((Statement
         (Jump (Return ((Constant (Char ((kind Wide) (value ((Escape t))))))))))))))
    (Function
-    ((specifiers (Nonunique (Eq Int ())))
+    ((returns (Nonunique (Eq Int ())))
      (declarator
       (Function (declarator (Identifier test19))
        (parameters
@@ -762,7 +762,7 @@ int test25(void) { return L'\x333'; }
       ((Statement
         (Jump (Return ((Constant (Char ((kind Plain) (value ((Escape v))))))))))))))
    (Function
-    ((specifiers (Nonunique (Eq Int ())))
+    ((returns (Nonunique (Eq Int ())))
      (declarator
       (Function (declarator (Identifier test20))
        (parameters
@@ -775,7 +775,7 @@ int test25(void) { return L'\x333'; }
       ((Statement
         (Jump (Return ((Constant (Char ((kind Wide) (value ((Escape v))))))))))))))
    (Function
-    ((specifiers (Nonunique (Eq Int ())))
+    ((returns (Nonunique (Eq Int ())))
      (declarator
       (Function (declarator (Identifier test21))
        (parameters
@@ -789,7 +789,7 @@ int test25(void) { return L'\x333'; }
         (Jump
          (Return ((Constant (Char ((kind Plain) (value ((Plain U+0063))))))))))))))
    (Function
-    ((specifiers (Nonunique (Eq Int ())))
+    ((returns (Nonunique (Eq Int ())))
      (declarator
       (Function (declarator (Identifier test22))
        (parameters
@@ -803,7 +803,7 @@ int test25(void) { return L'\x333'; }
         (Jump
          (Return ((Constant (Char ((kind Wide) (value ((Plain U+0063))))))))))))))
    (Function
-    ((specifiers (Nonunique (Eq Int ())))
+    ((returns (Nonunique (Eq Int ())))
      (declarator
       (Function (declarator (Identifier test23))
        (parameters
@@ -817,7 +817,7 @@ int test25(void) { return L'\x333'; }
         (Jump
          (Return ((Constant (Char ((kind Plain) (value ((Hex "\\x3"))))))))))))))
    (Function
-    ((specifiers (Nonunique (Eq Int ())))
+    ((returns (Nonunique (Eq Int ())))
      (declarator
       (Function (declarator (Identifier test24))
        (parameters
@@ -831,7 +831,7 @@ int test25(void) { return L'\x333'; }
         (Jump
          (Return ((Constant (Char ((kind Wide) (value ((Hex "\\x3"))))))))))))))
    (Function
-    ((specifiers (Nonunique (Eq Int ())))
+    ((returns (Nonunique (Eq Int ())))
      (declarator
       (Function (declarator (Identifier test25))
        (parameters
@@ -857,7 +857,7 @@ void bla1() {
     |};
 [%expect {|
   ((Function
-    ((specifiers (Unique (Eq Void ())))
+    ((returns (Unique (Eq Void ())))
      (declarator
       (Function (declarator (Identifier bla1)) (parameters (Second ()))))
      (arguments ())
@@ -883,7 +883,7 @@ int f (int z) {
     |};
 [%expect {|
   ((Function
-    ((specifiers (Nonunique (Eq Int ())))
+    ((returns (Nonunique (Eq Int ())))
      (declarator
       (Function (declarator (Identifier f))
        (parameters
@@ -937,7 +937,7 @@ int f(void) {
     |};
 [%expect {|
   ((Function
-    ((specifiers (Nonunique (Eq Int ())))
+    ((returns (Nonunique (Eq Int ())))
      (declarator
       (Function (declarator (Identifier f))
        (parameters
@@ -979,7 +979,7 @@ void f(void) {
     (Typedef (specifiers (Nonunique (A Typedef (Eq Int ()))))
      (declarators ((Plain (Identifier T))))))
    (Function
-    ((specifiers (Unique (Eq Void ())))
+    ((returns (Unique (Eq Void ())))
      (declarator
       (Function (declarator (Identifier f))
        (parameters
@@ -1025,7 +1025,7 @@ void f(void) {
     (Typedef (specifiers (Nonunique (A Typedef (Eq Int ()))))
      (declarators ((Plain (Identifier T))))))
    (Function
-    ((specifiers (Unique (Eq Void ())))
+    ((returns (Unique (Eq Void ())))
      (declarator
       (Function (declarator (Identifier f))
        (parameters
@@ -1105,7 +1105,7 @@ void f (void) {
     (Typedef (specifiers (Nonunique (A Typedef (Eq Int ()))))
      (declarators ((Plain (Identifier T))))))
    (Function
-    ((specifiers (Unique (Eq Void ())))
+    ((returns (Unique (Eq Void ())))
      (declarator
       (Function (declarator (Identifier f))
        (parameters
@@ -1250,7 +1250,7 @@ int PR20634 = sizeof(struct { int n; } [5]);
       (Unique (Eq (Struct_or_union (Named (kind Struct) (name str))) ())))
      (init_declarators ())))
    (Function
-    ((specifiers (Unique (Eq Void ())))
+    ((returns (Unique (Eq Void ())))
      (declarator
       (Function (declarator (Identifier test2))
        (parameters
@@ -1425,7 +1425,7 @@ void f(void) {
              ((Abstract (specifiers (Unique (Eq (Name T) ()))) (declarator ()))))
             (ellipsis false))))))))))
    (Function
-    ((specifiers (Unique (Eq Void ())))
+    ((returns (Unique (Eq Void ())))
      (declarator
       (Function (declarator (Identifier f))
        (parameters
@@ -1566,7 +1566,7 @@ void f(void) {
     (Typedef (specifiers (Nonunique (A Typedef (Eq Int ()))))
      (declarators ((Plain (Identifier T))))))
    (Function
-    ((specifiers (Unique (Eq Void ())))
+    ((returns (Unique (Eq Void ())))
      (declarator
       (Function (declarator (Identifier f))
        (parameters
@@ -1629,7 +1629,7 @@ void f(void) {
     (Typedef (specifiers (Nonunique (A Typedef (Eq Int ()))))
      (declarators ((Plain (Identifier T))))))
    (Function
-    ((specifiers (Unique (Eq Void ())))
+    ((returns (Unique (Eq Void ())))
      (declarator
       (Function (declarator (Identifier f))
        (parameters
@@ -1736,7 +1736,7 @@ void test_sizeof(){
     |};
 [%expect {|
   ((Function
-    ((specifiers (Unique (Eq Void ())))
+    ((returns (Unique (Eq Void ())))
      (declarator
       (Function (declarator (Identifier test1)) (parameters (Second ()))))
      (arguments ())
@@ -1809,7 +1809,7 @@ void test_sizeof(){
                   (initializer_list ((() (Expression (Constant (Integer 1)))))))))
                (field a)))))))))))))
    (Function
-    ((specifiers (Nonunique (Eq Int ())))
+    ((returns (Nonunique (Eq Int ())))
      (declarator
       (Function (declarator (Identifier test2))
        (parameters
@@ -1836,7 +1836,7 @@ void test_sizeof(){
               (Var b)))
             (if_false (Var a)))))))))))
    (Function
-    ((specifiers (Nonunique (Eq Int ())))
+    ((returns (Nonunique (Eq Int ())))
      (declarator
       (Function (declarator (Identifier test3))
        (parameters
@@ -1859,7 +1859,7 @@ void test_sizeof(){
              (Binary (operator (Assignment Plain)) (left (Var b))
               (right (Var c)))))))))))))
    (Function
-    ((specifiers (Nonunique (Eq Int ())))
+    ((returns (Nonunique (Eq Int ())))
      (declarator
       (Function (declarator (Identifier test4)) (parameters (Second ()))))
      (arguments ())
@@ -1907,7 +1907,7 @@ void test_sizeof(){
         ())))
      (init_declarators ())))
    (Function
-    ((specifiers (Unique (Eq Void ())))
+    ((returns (Unique (Eq Void ())))
      (declarator
       (Function (declarator (Identifier test_sizeof)) (parameters (Second ()))))
      (arguments ())
@@ -1965,7 +1965,7 @@ void foo() {
     |};
 [%expect {|
   ((Function
-    ((specifiers (Unique (Eq Void ())))
+    ((returns (Unique (Eq Void ())))
      (declarator
       (Function (declarator (Identifier foo)) (parameters (Second ()))))
      (arguments ())
@@ -2133,7 +2133,7 @@ enum {V} (*f(T T, enum {U} y, int x[T+U]))(T t) {
     (Typedef (specifiers (Nonunique (A Typedef (Eq Long ()))))
      (declarators ((Plain (Identifier T)) (Plain (Identifier U))))))
    (Function
-    ((specifiers
+    ((returns
       (Unique
        (Eq (Enum (Defined (name ()) (values (((name V) (value ())))))) ())))
      (declarator
@@ -2220,7 +2220,7 @@ void f(void) {
     (Normal (specifiers (Nonunique (Eq Int ())))
      (init_declarators ((Plain (Identifier x))))))
    (Function
-    ((specifiers (Unique (Eq Void ())))
+    ((returns (Unique (Eq Void ())))
      (declarator
       (Function (declarator (Identifier f))
        (parameters
@@ -2309,7 +2309,7 @@ void f(void) {
     (Typedef (specifiers (Nonunique (A Typedef (Eq Int ()))))
      (declarators ((Plain (Identifier T))))))
    (Function
-    ((specifiers (Unique (Eq Void ())))
+    ((returns (Unique (Eq Void ())))
      (declarator
       (Function (declarator (Identifier f))
        (parameters
@@ -2362,7 +2362,7 @@ void f(void) {
     (Typedef (specifiers (Nonunique (A Typedef (Eq Int ()))))
      (declarators ((Plain (Identifier T1))))))
    (Function
-    ((specifiers (Unique (Eq Void ())))
+    ((returns (Unique (Eq Void ())))
      (declarator
       (Function (declarator (Identifier f))
        (parameters
@@ -2443,7 +2443,7 @@ void f(void) {
     (Normal (specifiers (Nonunique (Eq Int ())))
      (init_declarators ((Plain (Identifier x))))))
    (Function
-    ((specifiers (Unique (Eq Void ())))
+    ((returns (Unique (Eq Void ())))
      (declarator
       (Function (declarator (Identifier f))
        (parameters
@@ -2604,7 +2604,7 @@ void f(void) {
         ())))
      (init_declarators ())))
    (Function
-    ((specifiers (Unique (Eq Void ())))
+    ((returns (Unique (Eq Void ())))
      (declarator
       (Function (declarator (Identifier f))
        (parameters
@@ -2680,7 +2680,7 @@ int f(void) {
     (Normal (specifiers (Nonunique (Eq Int ())))
      (init_declarators ((Plain (Identifier x))))))
    (Function
-    ((specifiers (Nonunique (Eq Int ())))
+    ((returns (Nonunique (Eq Int ())))
      (declarator
       (Function (declarator (Identifier f))
        (parameters
@@ -2851,7 +2851,7 @@ void test5() {
     |};
 [%expect {|
   ((Function
-    ((specifiers (Unique (Eq Void ())))
+    ((returns (Unique (Eq Void ())))
      (declarator
       (Function (declarator (Identifier test1)) (parameters (Second ()))))
      (arguments ())
@@ -2863,7 +2863,7 @@ void test5() {
            (Compound ((Statement (Expression ())) (Statement (Expression ()))))))))
        (Statement (Expression ())) (Statement (Expression ()))))))
    (Function
-    ((specifiers (Unique (Eq Void ())))
+    ((returns (Unique (Eq Void ())))
      (declarator
       (Function (declarator (Identifier test2)) (parameters (Second ()))))
      (arguments ())
@@ -2943,7 +2943,7 @@ void test5() {
              (operand (Constant (Integer 0))))))
           (body (Expression ())))))))))
    (Function
-    ((specifiers (Unique (Eq Void ())))
+    ((returns (Unique (Eq Void ())))
      (declarator
       (Function (declarator (Identifier test3)) (parameters (Second ()))))
      (arguments ())
@@ -2968,7 +2968,7 @@ void test5() {
                    (else_ ())))))))
              (Statement (Labeled (Default (statement (Expression ())))))))))))))))
    (Function
-    ((specifiers (Unique (Eq Void ())))
+    ((returns (Unique (Eq Void ())))
      (declarator
       (Function (declarator (Identifier test4)) (parameters (Second ()))))
      (arguments ())
@@ -2991,7 +2991,7 @@ void test5() {
     (Typedef (specifiers (Nonunique (A Typedef (Eq Int ()))))
      (declarators ((Plain (Identifier t))))))
    (Function
-    ((specifiers (Unique (Eq Void ())))
+    ((returns (Unique (Eq Void ())))
      (declarator
       (Function (declarator (Identifier test5)) (parameters (Second ()))))
      (arguments ())
@@ -3085,7 +3085,7 @@ void f(void) {
     (Typedef (specifiers (Nonunique (A Typedef (Eq Int ()))))
      (declarators ((Plain (Identifier T))))))
    (Function
-    ((specifiers (Unique (Eq Void ())))
+    ((returns (Unique (Eq Void ())))
      (declarator
       (Function (declarator (Identifier f))
        (parameters
@@ -3143,7 +3143,7 @@ void test() {
          ()))))
      (declarators ((Plain (Identifier foo))))))
    (Function
-    ((specifiers (Unique (Eq Void ())))
+    ((returns (Unique (Eq Void ())))
      (declarator
       (Function (declarator (Identifier test)) (parameters (Second ()))))
      (arguments ())
@@ -3173,7 +3173,7 @@ void f(void) {
     (Normal (specifiers (Nonunique (Eq Int ())))
      (init_declarators ((Plain (Identifier T)) (Plain (Identifier b))))))
    (Function
-    ((specifiers (Unique (Eq Void ())))
+    ((returns (Unique (Eq Void ())))
      (declarator
       (Function (declarator (Identifier f))
        (parameters

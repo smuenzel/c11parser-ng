@@ -652,7 +652,7 @@ module Make(L : Located) = struct
 
   and Function_definition : sig
     type t =
-      { specifiers : Declaration_specifiers.t
+      { returns : Declaration_specifiers.t
       ; declarator : Declarator.t
       ; arguments : Declaration.t list
       ; body : Compound_statement.t

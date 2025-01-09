@@ -345,9 +345,9 @@ module Make(L : Located) = struct
   module Function_definition = struct
     include T.Function_definition
 
-    let make (specifiers, declarator, arguments, body) =
+    let make (returns, declarator, arguments, body) =
       let arguments = Util.Stored_reversed.opt_to_list arguments in
-      { specifiers; declarator; arguments; body }
+      { returns; declarator; arguments; body }
   end
 
   module External_declaration = struct
