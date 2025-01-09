@@ -1,0 +1,13 @@
+
+translation_unit_file: BOOL NAME TYPE LBRACE NAME VARIABLE WHILE
+##
+## Ends in an error in state: 425.
+##
+## general_identifier -> var_name . [ COLON ]
+## primary_expression -> var_name . [ XOR_ASSIGN SUB_ASSIGN STAR SLASH SEMICOLON RIGHT_ASSIGN RIGHT QUESTION PTR PLUS PERCENT OR_ASSIGN NEQ MUL_ASSIGN MOD_ASSIGN MINUS LT LPAREN LEQ LEFT_ASSIGN LEFT LBRACK INC HAT GT GEQ EQEQ EQ DOT DIV_ASSIGN DEC COMMA BARBAR BAR AND_ASSIGN ANDAND AND ADD_ASSIGN ]
+##
+## The known suffix of the stack is as follows:
+## var_name
+##
+
+A typedef name is used in an incorrect context.

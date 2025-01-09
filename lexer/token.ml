@@ -2,8 +2,8 @@ open Sexplib0.Sexp_conv
 
 type t =
   | NAME of string
-  | VARIABLE
-  | TYPE
+  | VARIABLE of string
+  | TYPE of string
   | STRING_LITERAL of Literal.String.t
   | CONSTANT_CHAR of Literal.Char.t
   | CONSTANT_INTEGER of string

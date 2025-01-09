@@ -412,7 +412,7 @@ let lexer (state : State.t) (lexbuf : Sedlexing.lexbuf) : Token.t =
   match state.kind with
   | Ident id ->
     state.kind <- Regular;
-    if state.is_typedefname id then TYPE else VARIABLE
+    if state.is_typedefname id then TYPE id else VARIABLE id
   | Atomic
   | Regular ->
     let token = lexer lexbuf in

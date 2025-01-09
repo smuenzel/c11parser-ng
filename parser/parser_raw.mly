@@ -37,7 +37,9 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 %parameter<Context : Context.Packed>
 
 %token<string> NAME
-%token VARIABLE TYPE
+(* Also attach the name to VARIABLE and TYPE tokens, for better error messages. *)
+%token<string> VARIABLE
+%token<string> TYPE
 %token<C11lexer.Literal.String.t> STRING_LITERAL
 
 %token<C11lexer.Literal.Char.t> CONSTANT_CHAR
@@ -346,6 +348,7 @@ let argument_expression_list :=
 | ~=located(assignment_expression); < Util.Stored_reversed.singleton >
 | ~=argument_expression_list; ","; ~=located(assignment_expression);
 < Util.Stored_reversed.snoc >
+
 
 let unary_expression :=
 | ~=postfix_expression;

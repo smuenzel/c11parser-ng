@@ -8,5 +8,15 @@
 
 (menhir
    (modules parser_raw)
-   (flags (--external-tokens C11lexer.Token))
+   (flags (--exn-carries-state --external-tokens C11lexer.Token))
    )
+
+(rule
+  (target error_messages.ml)
+  (deps   
+          (:parser parser_raw.mly)
+          (:msg errors.messages))
+  (action (with-stdout-to %{target}
+          (run menhir --external-tokens C11lexer.Token
+                      %{parser} --base %{parser} --compile-errors %{msg})))
+)

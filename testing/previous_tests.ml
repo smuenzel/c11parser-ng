@@ -1078,9 +1078,8 @@ void f(void) {
   (* CR expect_test_collector: This test expectation appears to contain a backtrace.
      This is strongly discouraged as backtraces are fragile.
      Please change this test to not include a backtrace. *)
-  ("C11parser.Parser_raw.Make(Gen)(Context).MenhirBasics.Error")
-  Raised at C11parser__Parser_raw.Make.MenhirBasics._eRR in file "parser/parser_raw.ml" (inlined), line 21, characters 8-19
-  Called from C11parser__Parser_raw.Make._menhir_run_425 in file "parser/parser_raw.ml", line 5921, characters 12-19
+  ("Syntax error at line 9, column 11: 'A typedef name is used in an incorrect context.' (token: (VARIABLE T), state: 425)")
+  Raised at C11parser__Parser.Make.wrap.(fun) in file "parser/parser.ml", line 55, characters 6-84
   Called from Testing__Include.test in file "testing/include.ml", line 12, characters 12-42
   Called from Testing__Previous_tests.(fun) in file "testing/previous_tests.ml", lines 1063-1075, characters 2-6
   Called from Ppx_expect_runtime__Test_block.Configured.dump_backtrace in file "runtime/test_block.ml", line 142, characters 10-28
@@ -1692,10 +1691,11 @@ int main(int argc, char *argv[]) {
   (Failure "Lexer error")
   Raised at Stdlib.failwith in file "stdlib.ml", line 29, characters 17-33
   Called from C11lexer.lexer in file "lexer/c11lexer.ml", line 418, characters 16-28
-  Called from C11parser__Parser.Make.wrap.(fun).lexer in file "parser/parser.ml", line 21, characters 18-45
+  Called from C11parser__Parser.Make.wrap.(fun).lexer in file "parser/parser.ml", line 41, characters 18-45
   Called from C11parser__Parser_raw.Make._menhir_run_383 in file "parser/parser_raw.ml", line 16026, characters 19-47
+  Called from C11parser__Parser.Make.wrap.(fun) in file "parser/parser.ml", line 50, characters 6-24
   Called from Testing__Include.test in file "testing/include.ml", line 12, characters 12-42
-  Called from Testing__Previous_tests.(fun) in file "testing/previous_tests.ml", lines 1675-1686, characters 2-6
+  Called from Testing__Previous_tests.(fun) in file "testing/previous_tests.ml", lines 1674-1685, characters 2-6
   Called from Ppx_expect_runtime__Test_block.Configured.dump_backtrace in file "runtime/test_block.ml", line 142, characters 10-28
   |}]
 
