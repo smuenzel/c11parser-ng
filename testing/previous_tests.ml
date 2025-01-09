@@ -1734,18 +1734,223 @@ void test_sizeof(){
   (void)sizeof(arr)[0];
 }
     |};
-[%expect.unreachable]
-[@@expect.uncaught_exn {|
-  (* CR expect_test_collector: This test expectation appears to contain a backtrace.
-     This is strongly discouraged as backtraces are fragile.
-     Please change this test to not include a backtrace. *)
-  (Failure "")
-  Raised at Stdlib.failwith in file "stdlib.ml", line 29, characters 17-33
-  Called from C11parser__Parser_raw.Make._menhir_action_218 in file "parser/parser_raw.mly" (inlined), line 343, characters 4-18
-  Called from C11parser__Parser_raw.Make._menhir_run_367 in file "parser/parser_raw.ml", line 13530, characters 17-56
-  Called from Testing__Include.test in file "testing/include.ml", line 12, characters 12-42
-  Called from Testing__Previous_tests.(fun) in file "testing/previous_tests.ml", lines 1703-1736, characters 2-6
-  Called from Ppx_expect_runtime__Test_block.Configured.dump_backtrace in file "runtime/test_block.ml", line 142, characters 10-28
+[%expect {|
+  ((Function
+    ((specifiers (Unique (Eq Void ())))
+     (declarator
+      (Function (declarator (Identifier test1)) (parameters (Second ()))))
+     (arguments ())
+     (body
+      ((Statement
+        (Selection
+         (If
+          (condition
+           (Unary (operator Sizeof)
+            (operand
+             (Struct_initializer
+              ((type_name
+                ((specifier_qualifiers (Nonunique (Eq Int ())))
+                 (abstract_declarator ())))
+               (initializer_list ((() (Expression (Constant (Integer 1)))))))))))
+          (then_ (Compound ())) (else_ ()))))
+       (Statement
+        (Selection
+         (If
+          (condition
+           (Sizeof
+            ((specifier_qualifiers (Nonunique (Eq Int ())))
+             (abstract_declarator ()))))
+          (then_ (Compound ())) (else_ ()))))
+       (Statement
+        (Expression
+         ((Cast
+           (type_name
+            ((specifier_qualifiers (Unique (Eq Void ())))
+             (abstract_declarator ())))
+           (operand
+            (Cast
+             (type_name
+              ((specifier_qualifiers (Nonunique (Eq Int ())))
+               (abstract_declarator ())))
+             (operand (Constant (Integer 4)))))))))
+       (Statement
+        (Expression
+         ((Cast
+           (type_name
+            ((specifier_qualifiers (Unique (Eq Void ())))
+             (abstract_declarator ())))
+           (operand
+            (Struct_initializer
+             ((type_name
+               ((specifier_qualifiers (Nonunique (Eq Int ())))
+                (abstract_declarator ())))
+              (initializer_list ((() (Expression (Constant (Integer 4)))))))))))))
+       (Declaration
+        (Normal (specifiers (Nonunique (Eq Int ())))
+         (init_declarators
+          ((With_initializer (declarator (Identifier A))
+            (initializer_
+             (Expression
+              (Dot
+               (receiver
+                (Struct_initializer
+                 ((type_name
+                   ((specifier_qualifiers
+                     (Unique
+                      (Eq
+                       (Struct_or_union
+                        (Defined (kind Struct) (name ())
+                         (declaration
+                          ((Declarations
+                            (specifier_qualifiers (Nonunique (Eq Int ())))
+                            (declarators ((Declarator (Identifier a)))))))))
+                       ())))
+                    (abstract_declarator ())))
+                  (initializer_list ((() (Expression (Constant (Integer 1)))))))))
+               (field a)))))))))))))
+   (Function
+    ((specifiers (Nonunique (Eq Int ())))
+     (declarator
+      (Function (declarator (Identifier test2))
+       (parameters
+        (First
+         ((declarations
+           ((Declarator (specifiers (Nonunique (Eq Int ())))
+             (declarator (Identifier a)))
+            (Declarator (specifiers (Nonunique (Eq Int ())))
+             (declarator (Identifier b)))))
+          (ellipsis false))))))
+     (arguments ())
+     (body
+      ((Statement
+        (Jump
+         (Return
+          ((Question (condition (Var a))
+            (if_true
+             (Comma
+              (Cast
+               (type_name
+                ((specifier_qualifiers (Unique (Eq Void ())))
+                 (abstract_declarator ())))
+               (operand (Var a)))
+              (Var b)))
+            (if_false (Var a)))))))))))
+   (Function
+    ((specifiers (Nonunique (Eq Int ())))
+     (declarator
+      (Function (declarator (Identifier test3))
+       (parameters
+        (First
+         ((declarations
+           ((Declarator (specifiers (Nonunique (Eq Int ())))
+             (declarator (Identifier a)))
+            (Declarator (specifiers (Nonunique (Eq Int ())))
+             (declarator (Identifier b)))
+            (Declarator (specifiers (Nonunique (Eq Int ())))
+             (declarator (Identifier c)))))
+          (ellipsis false))))))
+     (arguments ())
+     (body
+      ((Statement
+        (Jump
+         (Return
+          ((Binary (operator (Assignment Plain)) (left (Var a))
+            (right
+             (Binary (operator (Assignment Plain)) (left (Var b))
+              (right (Var c)))))))))))))
+   (Function
+    ((specifiers (Nonunique (Eq Int ())))
+     (declarator
+      (Function (declarator (Identifier test4)) (parameters (Second ()))))
+     (arguments ())
+     (body
+      ((Statement
+        (Expression ((Function_call (callee (Var test4)) (arguments ())))))
+       (Statement (Jump (Return ((Constant (Integer 0))))))))))
+   (Declaration
+    (Normal
+     (specifiers
+      (Unique
+       (Eq
+        (Struct_or_union
+         (Defined (kind Struct) (name (X0))
+          (declaration
+           ((Declarations
+             (specifier_qualifiers
+              (Unique
+               (Eq
+                (Struct_or_union
+                 (Defined (kind Struct) (name ())
+                  (declaration
+                   ((Declarations
+                     (specifier_qualifiers
+                      (Unique
+                       (Eq
+                        (Struct_or_union
+                         (Defined (kind Struct) (name ())
+                          (declaration
+                           ((Declarations
+                             (specifier_qualifiers (Nonunique (Eq Int ())))
+                             (declarators
+                              ((Declarator
+                                (Array
+                                 (declarator
+                                  (Array (declarator (Identifier c))
+                                   (qualifiers ())
+                                   (size ((Constant (Integer 10))))))
+                                 (qualifiers ())
+                                 (size ((Constant (Integer 9)))))))))))))
+                        ())))
+                     (declarators ((Declarator (Identifier b)))))))))
+                ())))
+             (declarators ((Declarator (Identifier a)))))))))
+        ())))
+     (init_declarators ())))
+   (Function
+    ((specifiers (Unique (Eq Void ())))
+     (declarator
+      (Function (declarator (Identifier test_sizeof)) (parameters (Second ()))))
+     (arguments ())
+     (body
+      ((Declaration
+        (Normal (specifiers (Nonunique (Eq Int ())))
+         (init_declarators
+          ((Plain
+            (Array (declarator (Identifier arr)) (qualifiers ())
+             (size ((Constant (Integer 10))))))))))
+       (Statement
+        (Expression
+         ((Cast
+           (type_name
+            ((specifier_qualifiers (Unique (Eq Void ())))
+             (abstract_declarator ())))
+           (operand
+            (Unary (operator Sizeof)
+             (operand
+              (Array_subscript (array (Var arr))
+               (index (Constant (Integer 0)))))))))))
+       (Statement
+        (Expression
+         ((Cast
+           (type_name
+            ((specifier_qualifiers (Unique (Eq Void ())))
+             (abstract_declarator ())))
+           (operand
+            (Unary (operator Sizeof)
+             (operand
+              (Array_subscript (array (Var arr))
+               (index (Constant (Integer 0)))))))))))
+       (Statement
+        (Expression
+         ((Cast
+           (type_name
+            ((specifier_qualifiers (Unique (Eq Void ())))
+             (abstract_declarator ())))
+           (operand
+            (Unary (operator Sizeof)
+             (operand
+              (Array_subscript (array (Var arr))
+               (index (Constant (Integer 0))))))))))))))))
   |}]
 
 let%expect_test "function-decls" =

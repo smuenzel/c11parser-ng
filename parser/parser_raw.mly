@@ -339,8 +339,8 @@ let postfix_expression :=
   { Gen.Expr.unary (Gen.Unary_operator.postincrement, x) }
 | x=located(postfix_expression); "--";
   { Gen.Expr.unary (Gen.Unary_operator.postdecrement, x) }
-| "("; type_name; ")"; "{"; initializer_list; ","?; "}";
-    { failwith ""}
+| "("; t=type_name; ")"; "{"; i=initializer_list; ","?; "}";
+{ Gen.Expr.struct_initializer (Gen.Struct_initializer.make (t,i)) }
 
 let argument_expression_list :=
 | ~=located(assignment_expression); < Util.Stored_reversed.singleton >

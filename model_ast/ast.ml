@@ -330,6 +330,16 @@ module Make(L : Located) = struct
       Initializer_list l
   end
 
+  module Struct_initializer = struct
+    include T.Struct_initializer
+
+    let make (type_name, l) =
+      let l = Util.Stored_reversed.to_list l in
+      let l = Core.List.map ~f:(Core.Tuple2.map_fst ~f:Util.Stored_reversed.opt_to_list) l in
+      { type_name; initializer_list = l }
+
+  end
+
   module Designator = T.Designator
 
   module Function_definition = struct

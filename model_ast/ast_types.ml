@@ -342,6 +342,7 @@ module Make(L : Located) = struct
       | Generic of Generic_selection.t
 
       | Comma of t located * t located
+      | Struct_initializer of Struct_initializer.t
     [@@deriving sexp, compare, hash, variants]
   end = Expr
 
@@ -634,6 +635,13 @@ module Make(L : Located) = struct
       | Initializer_list of (Designator.t list * C_initializer.t) list
     [@@deriving sexp, compare, hash]
   end = C_initializer
+
+  and Struct_initializer : sig
+    type t =
+      { type_name : Type_name.t
+      ; initializer_list : (Designator.t list * C_initializer.t) list
+      } [@@deriving sexp, compare, hash]
+  end = Struct_initializer
 
   and Designator : sig
     type t =

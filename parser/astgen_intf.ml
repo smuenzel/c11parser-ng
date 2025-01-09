@@ -200,6 +200,12 @@ module type S = sig
     val make : Expr.t located * Generic_association.t rev -> t
   end
 
+  and Struct_initializer : sig
+    type t
+
+    val make : Type_name.t * (Designator.t rev option * C_initializer.t) rev -> t
+  end
+
   and Expr : sig
     type t
     type t' := t located
@@ -230,6 +236,7 @@ module type S = sig
     val generic : Generic_selection.t -> t
 
     val comma : t' * t' -> t
+    val struct_initializer : Struct_initializer.t -> t
   end
    
   and Alignment_specifier : sig
