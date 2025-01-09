@@ -218,7 +218,7 @@ let rec initial lexbuf : Token.t =
   | "?"                           ->  QUESTION 
   | ":"                           ->  COLON 
   | "~"                           ->  TILDE 
-  | "{"|"<%"                    ->  LBRACE 
+  | "{"|"<%"                      ->  LBRACE 
   | "}"|"%>"                      ->  RBRACE 
   | "["|"<:"                      ->  LBRACK 
   | "]"|":>"                      ->  RBRACK 
@@ -339,14 +339,17 @@ and multiline_comment lexbuf =
   | "*/"   ->  () 
   | eof    ->  failwith "unterminated comment" 
   | '\n'   ->  new_line lexbuf; multiline_comment lexbuf 
-  | _      ->  multiline_comment lexbuf 
+  | Compl (Chars "") -> multiline_comment lexbuf 
+  | _      ->  failwith "Lexer error"
 
 (* Single-line comment terminated by a newline *)
 and singleline_comment lexbuf =
   match%sedlex lexbuf with
   | '\n'   ->  new_line lexbuf 
   | eof    ->  () 
-  | _      ->  singleline_comment lexbuf 
+  | Compl (Chars "") ->  singleline_comment lexbuf 
+  | _
+      ->  failwith "Lexer error" 
 
 
 (* This lexer chooses between [inital] or [initial_linebegin],

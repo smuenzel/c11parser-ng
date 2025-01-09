@@ -247,14 +247,17 @@ int *const _Atomic atomic_return_type();
            (parameters (Second ())))))))))))
   |}]
 
-(*
 let%expect_test "atomic_parenthesis" =
   test
     {|
 // atomic_parenthesis.c
 int _Atomic (x);
     |};
-[%expect {||}]
+[%expect {|
+  ((Declaration
+    (Normal (specifiers (Nonunique (Eq Int ((Type_qualifier Atomic)))))
+     (init_declarators ((Plain (Identifier x)))))))
+  |}]
 
 let%expect_test "bitfield_declaration_ambiguity" =
   test
@@ -266,7 +269,31 @@ struct S {
   const T:3;    // anonymous bit-field with type const T
 };
     |};
-[%expect {||}]
+[%expect {|
+  ((Declaration
+    (Typedef (specifiers (Nonunique (A Typedef (A Signed (Eq Int ())))))
+     (declarators ((Plain (Identifier T))))))
+   (Declaration
+    (Normal
+     (specifiers
+      (Unique
+       (Eq
+        (Struct_or_union
+         (Defined (kind Struct) (name (S))
+          (declaration
+           ((Declarations (specifier_qualifiers (Nonunique (Eq Unsigned ())))
+             (declarators
+              ((Bit_field (declarator ((Identifier T)))
+                (size (Constant (Integer 3)))))))
+            (Declarations
+             (specifier_qualifiers
+              (Unique (Neq (First Const) (Eq (Name T) ()))))
+             (declarators
+              ((Bit_field (declarator ()) (size (Constant (Integer 3)))))))))))
+        ())))
+     (init_declarators ()))))
+  |}]
+
 
 let%expect_test "bitfield_declaration_ambiguity.fail" =
   test
@@ -281,7 +308,40 @@ int f(struct S s) {
   return s.T;
 }
     |};
-[%expect {||}]
+[%expect {|
+  ((Declaration
+    (Typedef (specifiers (Nonunique (A Typedef (A Signed (Eq Int ())))))
+     (declarators ((Plain (Identifier T))))))
+   (Declaration
+    (Normal
+     (specifiers
+      (Unique
+       (Eq
+        (Struct_or_union
+         (Defined (kind Struct) (name (S))
+          (declaration
+           ((Declarations
+             (specifier_qualifiers
+              (Unique (Neq (First Const) (Eq (Name T) ()))))
+             (declarators
+              ((Bit_field (declarator ()) (size (Constant (Integer 3)))))))))))
+        ())))
+     (init_declarators ())))
+   (Function
+    ((specifiers (Nonunique (Eq Int ())))
+     (declarator
+      (Function (declarator (Identifier f))
+       (parameters
+        (First
+         ((declarations
+           ((Declarator
+             (specifiers
+              (Unique (Eq (Struct_or_union (Named (kind Struct) (name S))) ())))
+             (declarator (Identifier s)))))
+          (ellipsis false))))))
+     (arguments ())
+     (body ((Statement (Jump (Return ((Dot (receiver (Var s)) (field T)))))))))))
+  |}]
 
 let%expect_test "bitfield_declaration_ambiguity.ok" =
   test
@@ -296,7 +356,40 @@ int f(struct S s) {
   return s.T;
 }
     |};
-[%expect {||}]
+[%expect {|
+  ((Declaration
+    (Typedef (specifiers (Nonunique (A Typedef (A Signed (Eq Int ())))))
+     (declarators ((Plain (Identifier T))))))
+   (Declaration
+    (Normal
+     (specifiers
+      (Unique
+       (Eq
+        (Struct_or_union
+         (Defined (kind Struct) (name (S))
+          (declaration
+           ((Declarations (specifier_qualifiers (Nonunique (Eq Unsigned ())))
+             (declarators
+              ((Bit_field (declarator ((Identifier T)))
+                (size (Constant (Integer 3)))))))))))
+        ())))
+     (init_declarators ())))
+   (Function
+    ((specifiers (Nonunique (Eq Int ())))
+     (declarator
+      (Function (declarator (Identifier f))
+       (parameters
+        (First
+         ((declarations
+           ((Declarator
+             (specifiers
+              (Unique (Eq (Struct_or_union (Named (kind Struct) (name S))) ())))
+             (declarator (Identifier s)))))
+          (ellipsis false))))))
+     (arguments ())
+     (body ((Statement (Jump (Return ((Dot (receiver (Var s)) (field T)))))))))))
+  |}]
+
 
 let%expect_test "block_scope" =
   test
@@ -313,7 +406,44 @@ void f(void) {
   T u;   // T as a variable is no longer visible
 }
     |};
-[%expect {||}]
+[%expect {|
+  ((Declaration
+    (Typedef (specifiers (Nonunique (A Typedef (Eq Int ()))))
+     (declarators ((Plain (Identifier T))))))
+   (Declaration
+    (Normal (specifiers (Nonunique (Eq Int ())))
+     (init_declarators ((Plain (Identifier x))))))
+   (Function
+    ((specifiers (Unique (Eq Void ())))
+     (declarator
+      (Function (declarator (Identifier f))
+       (parameters
+        (First
+         ((declarations
+           ((Abstract (specifiers (Unique (Eq Void ()))) (declarator ()))))
+          (ellipsis false))))))
+     (arguments ())
+     (body
+      ((Statement
+        (Compound
+         ((Declaration
+           (Normal (specifiers (Unique (Eq (Name T) ())))
+            (init_declarators ((Plain (Identifier T))))))
+          (Statement
+           (Expression
+            ((Binary (operator (Assignment Plain)) (left (Var T))
+              (right (Constant (Integer 1)))))))
+          (Declaration
+           (Typedef (specifiers (Nonunique (A Typedef (Eq Int ()))))
+            (declarators ((Plain (Identifier x)))))))))
+       (Statement
+        (Expression
+         ((Binary (operator (Assignment Plain)) (left (Var x))
+           (right (Constant (Integer 1)))))))
+       (Declaration
+        (Normal (specifiers (Unique (Eq (Name T) ())))
+         (init_declarators ((Plain (Identifier u)))))))))))
+  |}]
 
 let%expect_test "c11-noreturn" =
   test
@@ -321,7 +451,18 @@ let%expect_test "c11-noreturn" =
 _Noreturn int f();
 int _Noreturn f();
     |};
-[%expect {||}]
+[%expect {|
+  ((Declaration
+    (Normal
+     (specifiers (Nonunique (B (Function_specifier Noreturn) (Eq Int ()))))
+     (init_declarators
+      ((Plain (Function (declarator (Identifier f)) (parameters (Second ()))))))))
+   (Declaration
+    (Normal (specifiers (Nonunique (Eq Int ((Function_specifier Noreturn)))))
+     (init_declarators
+      ((Plain (Function (declarator (Identifier f)) (parameters (Second ())))))))))
+  |}]
+
 
 let%expect_test "c1x-alignas" =
   test
@@ -331,7 +472,43 @@ unsigned _Alignas(long) char c2;
 char _Alignas(16) c3;
 char _Alignas(_Alignof(int)) c5;
     |};
-[%expect {||}]
+[%expect {|
+  ((Declaration
+    (Normal
+     (specifiers
+      (Nonunique
+       (B (Alignment_specifier (Expr (Constant (Integer 4)))) (Eq Char ()))))
+     (init_declarators ((Plain (Identifier c1))))))
+   (Declaration
+    (Normal
+     (specifiers
+      (Nonunique
+       (A Unsigned
+        (B
+         (Alignment_specifier
+          (Type
+           ((specifier_qualifiers (Nonunique (Eq Long ())))
+            (abstract_declarator ()))))
+         (Eq Char ())))))
+     (init_declarators ((Plain (Identifier c2))))))
+   (Declaration
+    (Normal
+     (specifiers
+      (Nonunique
+       (Eq Char ((Alignment_specifier (Expr (Constant (Integer 16))))))))
+     (init_declarators ((Plain (Identifier c3))))))
+   (Declaration
+    (Normal
+     (specifiers
+      (Nonunique
+       (Eq Char
+        ((Alignment_specifier
+          (Expr
+           (Alignof
+            ((specifier_qualifiers (Nonunique (Eq Int ())))
+             (abstract_declarator ())))))))))
+     (init_declarators ((Plain (Identifier c5)))))))
+  |}]
 
 let%expect_test "char-literal-printing" =
   test
@@ -360,7 +537,314 @@ int    test23(void) { return '\x3'; }
 int test24(void) { return L'\x3'; }
 int test25(void) { return L'\x333'; }
     |};
-[%expect {||}]
+[%expect {|
+  ((Function
+    ((specifiers (Nonunique (Eq Int ())))
+     (declarator
+      (Function (declarator (Identifier test1))
+       (parameters
+        (First
+         ((declarations
+           ((Abstract (specifiers (Unique (Eq Void ()))) (declarator ()))))
+          (ellipsis false))))))
+     (arguments ())
+     (body
+      ((Statement
+        (Jump
+         (Return ((Constant (Char ((kind Plain) (value ((Escape "\\"))))))))))))))
+   (Function
+    ((specifiers (Nonunique (Eq Int ())))
+     (declarator
+      (Function (declarator (Identifier test2))
+       (parameters
+        (First
+         ((declarations
+           ((Abstract (specifiers (Unique (Eq Void ()))) (declarator ()))))
+          (ellipsis false))))))
+     (arguments ())
+     (body
+      ((Statement
+        (Jump
+         (Return ((Constant (Char ((kind Wide) (value ((Escape "\\"))))))))))))))
+   (Function
+    ((specifiers (Nonunique (Eq Int ())))
+     (declarator
+      (Function (declarator (Identifier test3))
+       (parameters
+        (First
+         ((declarations
+           ((Abstract (specifiers (Unique (Eq Void ()))) (declarator ()))))
+          (ellipsis false))))))
+     (arguments ())
+     (body
+      ((Statement
+        (Jump (Return ((Constant (Char ((kind Plain) (value ((Escape '))))))))))))))
+   (Function
+    ((specifiers (Nonunique (Eq Int ())))
+     (declarator
+      (Function (declarator (Identifier test4))
+       (parameters
+        (First
+         ((declarations
+           ((Abstract (specifiers (Unique (Eq Void ()))) (declarator ()))))
+          (ellipsis false))))))
+     (arguments ())
+     (body
+      ((Statement
+        (Jump (Return ((Constant (Char ((kind Wide) (value ((Escape '))))))))))))))
+   (Function
+    ((specifiers (Nonunique (Eq Int ())))
+     (declarator
+      (Function (declarator (Identifier test5))
+       (parameters
+        (First
+         ((declarations
+           ((Abstract (specifiers (Unique (Eq Void ()))) (declarator ()))))
+          (ellipsis false))))))
+     (arguments ())
+     (body
+      ((Statement
+        (Jump (Return ((Constant (Char ((kind Plain) (value ((Escape a))))))))))))))
+   (Function
+    ((specifiers (Nonunique (Eq Int ())))
+     (declarator
+      (Function (declarator (Identifier test6))
+       (parameters
+        (First
+         ((declarations
+           ((Abstract (specifiers (Unique (Eq Void ()))) (declarator ()))))
+          (ellipsis false))))))
+     (arguments ())
+     (body
+      ((Statement
+        (Jump (Return ((Constant (Char ((kind Wide) (value ((Escape a))))))))))))))
+   (Function
+    ((specifiers (Nonunique (Eq Int ())))
+     (declarator
+      (Function (declarator (Identifier test7))
+       (parameters
+        (First
+         ((declarations
+           ((Abstract (specifiers (Unique (Eq Void ()))) (declarator ()))))
+          (ellipsis false))))))
+     (arguments ())
+     (body
+      ((Statement
+        (Jump (Return ((Constant (Char ((kind Plain) (value ((Escape b))))))))))))))
+   (Function
+    ((specifiers (Nonunique (Eq Int ())))
+     (declarator
+      (Function (declarator (Identifier test8))
+       (parameters
+        (First
+         ((declarations
+           ((Abstract (specifiers (Unique (Eq Void ()))) (declarator ()))))
+          (ellipsis false))))))
+     (arguments ())
+     (body
+      ((Statement
+        (Jump (Return ((Constant (Char ((kind Wide) (value ((Escape b))))))))))))))
+   (Function
+    ((specifiers (Nonunique (Eq Int ())))
+     (declarator
+      (Function (declarator (Identifier test11))
+       (parameters
+        (First
+         ((declarations
+           ((Abstract (specifiers (Unique (Eq Void ()))) (declarator ()))))
+          (ellipsis false))))))
+     (arguments ())
+     (body
+      ((Statement
+        (Jump (Return ((Constant (Char ((kind Plain) (value ((Escape f))))))))))))))
+   (Function
+    ((specifiers (Nonunique (Eq Int ())))
+     (declarator
+      (Function (declarator (Identifier test12))
+       (parameters
+        (First
+         ((declarations
+           ((Abstract (specifiers (Unique (Eq Void ()))) (declarator ()))))
+          (ellipsis false))))))
+     (arguments ())
+     (body
+      ((Statement
+        (Jump (Return ((Constant (Char ((kind Wide) (value ((Escape f))))))))))))))
+   (Function
+    ((specifiers (Nonunique (Eq Int ())))
+     (declarator
+      (Function (declarator (Identifier test13))
+       (parameters
+        (First
+         ((declarations
+           ((Abstract (specifiers (Unique (Eq Void ()))) (declarator ()))))
+          (ellipsis false))))))
+     (arguments ())
+     (body
+      ((Statement
+        (Jump (Return ((Constant (Char ((kind Plain) (value ((Escape n))))))))))))))
+   (Function
+    ((specifiers (Nonunique (Eq Int ())))
+     (declarator
+      (Function (declarator (Identifier test14))
+       (parameters
+        (First
+         ((declarations
+           ((Abstract (specifiers (Unique (Eq Void ()))) (declarator ()))))
+          (ellipsis false))))))
+     (arguments ())
+     (body
+      ((Statement
+        (Jump (Return ((Constant (Char ((kind Wide) (value ((Escape n))))))))))))))
+   (Function
+    ((specifiers (Nonunique (Eq Int ())))
+     (declarator
+      (Function (declarator (Identifier test15))
+       (parameters
+        (First
+         ((declarations
+           ((Abstract (specifiers (Unique (Eq Void ()))) (declarator ()))))
+          (ellipsis false))))))
+     (arguments ())
+     (body
+      ((Statement
+        (Jump (Return ((Constant (Char ((kind Plain) (value ((Escape r))))))))))))))
+   (Function
+    ((specifiers (Nonunique (Eq Int ())))
+     (declarator
+      (Function (declarator (Identifier test16))
+       (parameters
+        (First
+         ((declarations
+           ((Abstract (specifiers (Unique (Eq Void ()))) (declarator ()))))
+          (ellipsis false))))))
+     (arguments ())
+     (body
+      ((Statement
+        (Jump (Return ((Constant (Char ((kind Wide) (value ((Escape r))))))))))))))
+   (Function
+    ((specifiers (Nonunique (Eq Int ())))
+     (declarator
+      (Function (declarator (Identifier test17))
+       (parameters
+        (First
+         ((declarations
+           ((Abstract (specifiers (Unique (Eq Void ()))) (declarator ()))))
+          (ellipsis false))))))
+     (arguments ())
+     (body
+      ((Statement
+        (Jump (Return ((Constant (Char ((kind Plain) (value ((Escape t))))))))))))))
+   (Function
+    ((specifiers (Nonunique (Eq Int ())))
+     (declarator
+      (Function (declarator (Identifier test18))
+       (parameters
+        (First
+         ((declarations
+           ((Abstract (specifiers (Unique (Eq Void ()))) (declarator ()))))
+          (ellipsis false))))))
+     (arguments ())
+     (body
+      ((Statement
+        (Jump (Return ((Constant (Char ((kind Wide) (value ((Escape t))))))))))))))
+   (Function
+    ((specifiers (Nonunique (Eq Int ())))
+     (declarator
+      (Function (declarator (Identifier test19))
+       (parameters
+        (First
+         ((declarations
+           ((Abstract (specifiers (Unique (Eq Void ()))) (declarator ()))))
+          (ellipsis false))))))
+     (arguments ())
+     (body
+      ((Statement
+        (Jump (Return ((Constant (Char ((kind Plain) (value ((Escape v))))))))))))))
+   (Function
+    ((specifiers (Nonunique (Eq Int ())))
+     (declarator
+      (Function (declarator (Identifier test20))
+       (parameters
+        (First
+         ((declarations
+           ((Abstract (specifiers (Unique (Eq Void ()))) (declarator ()))))
+          (ellipsis false))))))
+     (arguments ())
+     (body
+      ((Statement
+        (Jump (Return ((Constant (Char ((kind Wide) (value ((Escape v))))))))))))))
+   (Function
+    ((specifiers (Nonunique (Eq Int ())))
+     (declarator
+      (Function (declarator (Identifier test21))
+       (parameters
+        (First
+         ((declarations
+           ((Abstract (specifiers (Unique (Eq Void ()))) (declarator ()))))
+          (ellipsis false))))))
+     (arguments ())
+     (body
+      ((Statement
+        (Jump
+         (Return ((Constant (Char ((kind Plain) (value ((Plain U+0063))))))))))))))
+   (Function
+    ((specifiers (Nonunique (Eq Int ())))
+     (declarator
+      (Function (declarator (Identifier test22))
+       (parameters
+        (First
+         ((declarations
+           ((Abstract (specifiers (Unique (Eq Void ()))) (declarator ()))))
+          (ellipsis false))))))
+     (arguments ())
+     (body
+      ((Statement
+        (Jump
+         (Return ((Constant (Char ((kind Wide) (value ((Plain U+0063))))))))))))))
+   (Function
+    ((specifiers (Nonunique (Eq Int ())))
+     (declarator
+      (Function (declarator (Identifier test23))
+       (parameters
+        (First
+         ((declarations
+           ((Abstract (specifiers (Unique (Eq Void ()))) (declarator ()))))
+          (ellipsis false))))))
+     (arguments ())
+     (body
+      ((Statement
+        (Jump
+         (Return ((Constant (Char ((kind Plain) (value ((Hex "\\x3"))))))))))))))
+   (Function
+    ((specifiers (Nonunique (Eq Int ())))
+     (declarator
+      (Function (declarator (Identifier test24))
+       (parameters
+        (First
+         ((declarations
+           ((Abstract (specifiers (Unique (Eq Void ()))) (declarator ()))))
+          (ellipsis false))))))
+     (arguments ())
+     (body
+      ((Statement
+        (Jump
+         (Return ((Constant (Char ((kind Wide) (value ((Hex "\\x3"))))))))))))))
+   (Function
+    ((specifiers (Nonunique (Eq Int ())))
+     (declarator
+      (Function (declarator (Identifier test25))
+       (parameters
+        (First
+         ((declarations
+           ((Abstract (specifiers (Unique (Eq Void ()))) (declarator ()))))
+          (ellipsis false))))))
+     (arguments ())
+     (body
+      ((Statement
+        (Jump
+         (Return ((Constant (Char ((kind Wide) (value ((Hex "\\x333")))))))))))))))
+  |}]
 
 let%expect_test "c-namespace" =
   test
@@ -371,7 +855,22 @@ void bla1() {
 }
 
     |};
-[%expect {||}]
+[%expect {|
+  ((Function
+    ((specifiers (Unique (Eq Void ())))
+     (declarator
+      (Function (declarator (Identifier bla1)) (parameters (Second ()))))
+     (arguments ())
+     (body
+      ((Declaration
+        (Normal
+         (specifiers
+          (Unique (Eq (Struct_or_union (Named (kind Struct) (name XXX))) ())))
+         (init_declarators ())))
+       (Declaration
+        (Normal (specifiers (Nonunique (Eq Int ())))
+         (init_declarators ((Plain (Identifier XXX)))))))))))
+  |}]
 
 let%expect_test "control-scope" =
   test
@@ -382,7 +881,48 @@ int f (int z) {
   return 0;
 }
     |};
-[%expect {||}]
+[%expect {|
+  ((Function
+    ((specifiers (Nonunique (Eq Int ())))
+     (declarator
+      (Function (declarator (Identifier f))
+       (parameters
+        (First
+         ((declarations
+           ((Declarator (specifiers (Nonunique (Eq Int ())))
+             (declarator (Identifier z)))))
+          (ellipsis false))))))
+     (arguments ())
+     (body
+      ((Statement
+        (Selection
+         (If
+          (condition
+           (Binary (operator (Additive Plus)) (left (Var z))
+            (right
+             (Sizeof
+              ((specifier_qualifiers
+                (Unique
+                 (Eq
+                  (Enum (Defined (name ()) (values (((name a) (value ()))))))
+                  ())))
+               (abstract_declarator ()))))))
+          (then_
+           (Jump
+            (Return
+             ((Binary (operator (Additive Plus)) (left (Constant (Integer 1)))
+               (right
+                (Sizeof
+                 ((specifier_qualifiers
+                   (Unique
+                    (Eq
+                     (Enum
+                      (Defined (name ()) (values (((name a) (value ()))))))
+                     ())))
+                  (abstract_declarator ())))))))))
+          (else_ ()))))
+       (Statement (Jump (Return ((Constant (Integer 0)))))))))))
+  |}]
 
 let%expect_test "dangling_else" =
   test
@@ -395,7 +935,30 @@ int f(void) {
   return 1;
 }
     |};
-[%expect {||}]
+[%expect {|
+  ((Function
+    ((specifiers (Nonunique (Eq Int ())))
+     (declarator
+      (Function (declarator (Identifier f))
+       (parameters
+        (First
+         ((declarations
+           ((Abstract (specifiers (Unique (Eq Void ()))) (declarator ()))))
+          (ellipsis false))))))
+     (arguments ())
+     (body
+      ((Statement
+        (Selection
+         (If (condition (Constant (Integer 0)))
+          (then_
+           (Selection
+            (If (condition (Constant (Integer 1)))
+             (then_ (Jump (Return ((Constant (Integer 1))))))
+             (else_ ((Jump (Return ((Constant (Integer 0))))))))))
+          (else_ ()))))
+       (Statement (Jump (Return ((Constant (Integer 1)))))))))))
+  |}]
+
 
 let%expect_test "dangling_else_lookahead" =
   test
@@ -411,7 +974,40 @@ void f(void) {
   x = 0;
 }
     |};
-[%expect {||}]
+[%expect {|
+  ((Declaration
+    (Typedef (specifiers (Nonunique (A Typedef (Eq Int ()))))
+     (declarators ((Plain (Identifier T))))))
+   (Function
+    ((specifiers (Unique (Eq Void ())))
+     (declarator
+      (Function (declarator (Identifier f))
+       (parameters
+        (First
+         ((declarations
+           ((Abstract (specifiers (Unique (Eq Void ()))) (declarator ()))))
+          (ellipsis false))))))
+     (arguments ())
+     (body
+      ((Statement
+        (Iteration
+         (For_decl
+          (declarator
+           (Normal (specifiers (Nonunique (Eq Int ())))
+            (init_declarators ((Plain (Identifier T))))))
+          (condition ()) (increment ())
+          (body
+           (Selection
+            (If (condition (Constant (Integer 1))) (then_ (Expression ()))
+             (else_ ())))))))
+       (Declaration
+        (Normal (specifiers (Unique (Eq (Name T) ())))
+         (init_declarators ((Plain (Identifier x))))))
+       (Statement
+        (Expression
+         ((Binary (operator (Assignment Plain)) (left (Var x))
+           (right (Constant (Integer 0))))))))))))
+  |}]
 
 let%expect_test "dangling_else_lookahead.if" =
   test
@@ -424,7 +1020,44 @@ void f(void) {
   x = 0;
 }
     |};
-[%expect {||}]
+[%expect {|
+  ((Declaration
+    (Typedef (specifiers (Nonunique (A Typedef (Eq Int ()))))
+     (declarators ((Plain (Identifier T))))))
+   (Function
+    ((specifiers (Unique (Eq Void ())))
+     (declarator
+      (Function (declarator (Identifier f))
+       (parameters
+        (First
+         ((declarations
+           ((Abstract (specifiers (Unique (Eq Void ()))) (declarator ()))))
+          (ellipsis false))))))
+     (arguments ())
+     (body
+      ((Statement
+        (Selection
+         (If
+          (condition
+           (Binary (operator (Equality Equal))
+            (left
+             (Sizeof
+              ((specifier_qualifiers
+                (Unique
+                 (Eq
+                  (Enum (Defined (name ()) (values (((name T) (value ()))))))
+                  ())))
+               (abstract_declarator ()))))
+            (right (Constant (Integer 0)))))
+          (then_ (Expression ())) (else_ ()))))
+       (Declaration
+        (Normal (specifiers (Unique (Eq (Name T) ())))
+         (init_declarators ((Plain (Identifier x))))))
+       (Statement
+        (Expression
+         ((Binary (operator (Assignment Plain)) (left (Var x))
+           (right (Constant (Integer 0))))))))))))
+  |}]
 
 let%expect_test "dangling_else_misleading.fail" =
   test
@@ -440,7 +1073,19 @@ void f(void) {
       }
 }
     |};
-[%expect {||}]
+[%expect.unreachable]
+[@@expect.uncaught_exn {|
+  (* CR expect_test_collector: This test expectation appears to contain a backtrace.
+     This is strongly discouraged as backtraces are fragile.
+     Please change this test to not include a backtrace. *)
+  ("C11parser.Parser_raw.Make(Gen)(Context).MenhirBasics.Error")
+  Raised at C11parser__Parser_raw.Make.MenhirBasics._eRR in file "parser/parser_raw.ml" (inlined), line 21, characters 8-19
+  Called from C11parser__Parser_raw.Make._menhir_run_425 in file "parser/parser_raw.ml", line 5921, characters 12-19
+  Called from Testing__Include.test in file "testing/include.ml", line 12, characters 12-42
+  Called from Testing__Previous_tests.(fun) in file "testing/previous_tests.ml", lines 1063-1075, characters 2-6
+  Called from Ppx_expect_runtime__Test_block.Configured.dump_backtrace in file "runtime/test_block.ml", line 142, characters 10-28
+  |}]
+
 
 let%expect_test "declaration_ambiguity" =
   test
@@ -455,7 +1100,39 @@ void f (void) {
   T = 1;
 }
     |};
-[%expect {||}]
+[%expect {|
+  ((Declaration
+    (Typedef (specifiers (Nonunique (A Typedef (Eq Int ()))))
+     (declarators ((Plain (Identifier T))))))
+   (Function
+    ((specifiers (Unique (Eq Void ())))
+     (declarator
+      (Function (declarator (Identifier f))
+       (parameters
+        (First
+         ((declarations
+           ((Abstract (specifiers (Unique (Eq Void ()))) (declarator ()))))
+          (ellipsis false))))))
+     (arguments ())
+     (body
+      ((Declaration
+        (Normal (specifiers (Nonunique (A Unsigned (Eq Int ()))))
+         (init_declarators ())))
+       (Declaration
+        (Normal
+         (specifiers (Unique (Neq (Type_qualifier Const) (Eq (Name T) ()))))
+         (init_declarators ())))
+       (Declaration
+        (Normal (specifiers (Unique (Eq (Name T) ())))
+         (init_declarators ((Plain (Identifier x))))))
+       (Declaration
+        (Normal (specifiers (Nonunique (Eq Unsigned ())))
+         (init_declarators ((Plain (Identifier T))))))
+       (Statement
+        (Expression
+         ((Binary (operator (Assignment Plain)) (left (Var T))
+           (right (Constant (Integer 1))))))))))))
+  |}]
 
 let%expect_test "declarators" =
   test
@@ -494,7 +1171,226 @@ enum E11 { A1 = 1,};
 
 int PR20634 = sizeof(struct { int n; } [5]);
     |};
-[%expect {||}]
+[%expect {|
+  ((Declaration
+    (Normal
+     (specifiers (Nonunique (B (Storage_class_specifier Extern) (Eq Int ()))))
+     (init_declarators
+      ((Plain (Array (declarator (Identifier a1)) (qualifiers ()) (size ())))))))
+   (Declaration
+    (Normal (specifiers (Unique (Eq Void ())))
+     (init_declarators
+      ((Plain
+        (Function (declarator (Identifier f1))
+         (parameters
+          (First
+           ((declarations
+             ((Abstract (specifiers (Nonunique (Eq Int ())))
+               (declarator
+                ((Direct (pointer ())
+                  (direct (Unspecified_size_variable_array ()))))))))
+            (ellipsis false))))))))))
+   (Declaration
+    (Normal (specifiers (Nonunique (Eq Char ())))
+     (init_declarators
+      ((Plain (Pointer (pointer Value) (inner (Identifier X))))))))
+   (Declaration
+    (Normal (specifiers (Unique (Eq Void ())))
+     (init_declarators
+      ((Plain
+        (Function
+         (declarator
+          (Pointer (pointer Value)
+           (inner
+            (Function (declarator (Identifier signal))
+             (parameters
+              (First
+               ((declarations
+                 ((Abstract (specifiers (Nonunique (Eq Int ())))
+                   (declarator ()))
+                  (Abstract (specifiers (Unique (Eq Void ())))
+                   (declarator
+                    ((Direct (pointer ())
+                      (direct
+                       (Function (declarator ((Abstract (Pointer Value))))
+                        (parameters
+                         ((declarations
+                           ((Abstract (specifiers (Nonunique (Eq Int ())))
+                             (declarator ()))))
+                          (ellipsis false)))))))))))
+                (ellipsis false))))))))
+         (parameters
+          (First
+           ((declarations
+             ((Abstract (specifiers (Nonunique (Eq Int ()))) (declarator ()))))
+            (ellipsis false))))))))))
+   (Declaration
+    (Normal (specifiers (Nonunique (Eq Int ())))
+     (init_declarators
+      ((Plain (Identifier aaaa))
+       (Plain
+        (Pointer (pointer (Pointer (Pointer Value))) (inner (Identifier C))))
+       (Plain
+        (Pointer (pointer (Qualified (qualifiers (Const)) (inner Value)))
+         (inner (Identifier D))))
+       (Plain
+        (Function (declarator (Identifier B))
+         (parameters
+          (First
+           ((declarations
+             ((Abstract (specifiers (Nonunique (Eq Int ()))) (declarator ()))))
+            (ellipsis false))))))))))
+   (Declaration
+    (Normal (specifiers (Nonunique (Eq Int ())))
+     (init_declarators
+      ((Plain (Pointer (pointer Value) (inner (Identifier A))))))))
+   (Declaration
+    (Normal
+     (specifiers
+      (Unique (Eq (Struct_or_union (Named (kind Struct) (name str))) ())))
+     (init_declarators ())))
+   (Function
+    ((specifiers (Unique (Eq Void ())))
+     (declarator
+      (Function (declarator (Identifier test2))
+       (parameters
+        (First
+         ((declarations
+           ((Declarator (specifiers (Nonunique (Eq Int ())))
+             (declarator (Pointer (pointer Value) (inner (Identifier P)))))
+            (Declarator (specifiers (Nonunique (Eq Int ())))
+             (declarator (Identifier A)))))
+          (ellipsis false))))))
+     (arguments ())
+     (body
+      ((Declaration
+        (Normal
+         (specifiers
+          (Unique (Eq (Struct_or_union (Named (kind Struct) (name str))) ())))
+         (init_declarators ())))
+       (Declaration
+        (Normal (specifiers (Nonunique (Eq Int ())))
+         (init_declarators
+          ((Plain
+            (Array (declarator (Identifier Array)) (qualifiers ())
+             (size
+              ((Binary (operator (Additive Plus))
+                (left
+                 (Unary (operator Dereference)
+                  (operand
+                   (Cast
+                    (type_name
+                     ((specifier_qualifiers (Nonunique (Eq Int ())))
+                      (abstract_declarator ((Pointer Value)))))
+                    (operand (Var P))))))
+                (right (Var A)))))))))))))))
+   (Declaration
+    (Normal
+     (specifiers
+      (Unique
+       (Eq
+        (Struct_or_union
+         (Defined (kind Struct) (name (xyz))
+          (declaration
+           ((Declarations (specifier_qualifiers (Nonunique (Eq Int ())))
+             (declarators ((Declarator (Identifier y)))))))))
+        ())))
+     (init_declarators ())))
+   (Declaration
+    (Normal
+     (specifiers
+      (Unique
+       (Eq
+        (Enum (Defined (name (myenum)) (values (((name ASDFAS) (value ()))))))
+        ())))
+     (init_declarators ())))
+   (Declaration
+    (Normal
+     (specifiers
+      (Unique
+       (Eq
+        (Struct_or_union
+         (Defined (kind Struct) (name (test10))
+          (declaration
+           ((Declarations (specifier_qualifiers (Nonunique (Eq Int ())))
+             (declarators ((Declarator (Identifier a)))))))))
+        ((Storage_class_specifier Static)))))
+     (init_declarators ((Plain (Identifier test10x))))))
+   (Declaration
+    (Normal
+     (specifiers
+      (Unique
+       (Eq
+        (Struct_or_union
+         (Defined (kind Struct) (name (test11))
+          (declaration
+           ((Declarations (specifier_qualifiers (Nonunique (Eq Int ())))
+             (declarators ((Declarator (Identifier a)))))))))
+        ((Type_qualifier Const)))))
+     (init_declarators ((Plain (Identifier test11x))))))
+   (Declaration
+    (Normal
+     (specifiers
+      (Unique
+       (Eq
+        (Struct_or_union
+         (Defined (kind Struct) (name (test13))
+          (declaration
+           ((Declarations (specifier_qualifiers (Nonunique (Eq Int ())))
+             (declarators ((Declarator (Identifier a)))))))))
+        ())))
+     (init_declarators ((Plain (Identifier test13x))))))
+   (Declaration
+    (Normal
+     (specifiers
+      (Unique
+       (Eq
+        (Struct_or_union
+         (Defined (kind Struct) (name (EnumBitfield))
+          (declaration
+           ((Declarations
+             (specifier_qualifiers
+              (Unique
+               (Eq
+                (Enum (Defined (name (E2)) (values (((name e2) (value ()))))))
+                ())))
+             (declarators
+              ((Bit_field (declarator ()) (size (Constant (Integer 4)))))))))))
+        ())))
+     (init_declarators ())))
+   (Declaration
+    (Normal
+     (specifiers
+      (Unique
+       (Eq
+        (Enum
+         (Defined (name (E11))
+          (values (((name A1) (value ((Constant (Integer 1)))))))))
+        ())))
+     (init_declarators ())))
+   (Declaration
+    (Normal (specifiers (Nonunique (Eq Int ())))
+     (init_declarators
+      ((With_initializer (declarator (Identifier PR20634))
+        (initializer_
+         (Expression
+          (Sizeof
+           ((specifier_qualifiers
+             (Unique
+              (Eq
+               (Struct_or_union
+                (Defined (kind Struct) (name ())
+                 (declaration
+                  ((Declarations (specifier_qualifiers (Nonunique (Eq Int ())))
+                    (declarators ((Declarator (Identifier n)))))))))
+               ())))
+            (abstract_declarator
+             ((Direct (pointer ())
+               (direct
+                (Array (declarator ()) (qualifiers ())
+                 (size ((Constant (Integer 5)))))))))))))))))))
+  |}]
+
 
 let%expect_test "declarator_visibility" =
   test
@@ -516,7 +1412,57 @@ void f(void) {
     // denotes a variable.
 }
     |};
-[%expect {||}]
+[%expect {|
+  ((Declaration
+    (Typedef (specifiers (Nonunique (A Typedef (Eq Int ()))))
+     (declarators
+      ((Plain (Identifier T))
+       (Plain
+        (Function (declarator (Identifier T1))
+         (parameters
+          (First
+           ((declarations
+             ((Abstract (specifiers (Unique (Eq (Name T) ()))) (declarator ()))))
+            (ellipsis false))))))))))
+   (Function
+    ((specifiers (Unique (Eq Void ())))
+     (declarator
+      (Function (declarator (Identifier f))
+       (parameters
+        (First
+         ((declarations
+           ((Abstract (specifiers (Unique (Eq Void ()))) (declarator ()))))
+          (ellipsis false))))))
+     (arguments ())
+     (body
+      ((Declaration
+        (Normal (specifiers (Nonunique (Eq Int ())))
+         (init_declarators
+          ((With_initializer
+            (declarator
+             (Function
+              (declarator (Pointer (pointer Value) (inner (Identifier T))))
+              (parameters
+               (First
+                ((declarations
+                  ((Declarator (specifiers (Unique (Eq (Name T) ())))
+                    (declarator (Identifier x)))))
+                 (ellipsis false))))))
+            (initializer_ (Expression (Constant (Integer 0)))))))))
+       (Declaration
+        (Normal (specifiers (Nonunique (Eq Int ())))
+         (init_declarators
+          ((With_initializer (declarator (Identifier T1))
+            (initializer_
+             (Expression
+              (Unary (operator Sizeof)
+               (operand
+                (Cast
+                 (type_name
+                  ((specifier_qualifiers (Nonunique (Eq Int ())))
+                   (abstract_declarator ())))
+                 (operand (Var T1)))))))))))))))))
+  |}]
 
 let%expect_test "designator" =
   test
@@ -539,7 +1485,48 @@ struct foo Y[10] = {
   /* [4] .arr [2] 4  // expected-error {{expected '=' or another designator}} */
 };
     |};
-[%expect {||}]
+[%expect {|
+  ((Declaration
+    (Normal (specifiers (Nonunique (Eq Int ())))
+     (init_declarators
+      ((With_initializer
+        (declarator
+         (Array (declarator (Identifier X)) (qualifiers ()) (size ())))
+        (initializer_
+         (Initializer_list
+          ((((Subscript (Constant (Integer 5))))
+            (Expression (Constant (Integer 7))))))))))))
+   (Declaration
+    (Normal
+     (specifiers
+      (Unique
+       (Eq
+        (Struct_or_union
+         (Defined (kind Struct) (name (foo))
+          (declaration
+           ((Declarations (specifier_qualifiers (Nonunique (Eq Int ())))
+             (declarators
+              ((Declarator
+                (Array (declarator (Identifier arr)) (qualifiers ())
+                 (size ((Constant (Integer 10)))))))))))))
+        ())))
+     (init_declarators ())))
+   (Declaration
+    (Normal
+     (specifiers
+      (Unique (Eq (Struct_or_union (Named (kind Struct) (name foo))) ())))
+     (init_declarators
+      ((With_initializer
+        (declarator
+         (Array (declarator (Identifier Y)) (qualifiers ())
+          (size ((Constant (Integer 10))))))
+        (initializer_
+         (Initializer_list
+          ((((Subscript (Constant (Integer 4))) (Field arr)
+             (Subscript (Constant (Integer 2))))
+            (Expression (Constant (Integer 4)))))))))))))
+  |}]
+
 
 let%expect_test "enum" =
   test
@@ -549,7 +1536,19 @@ typedef enum { a, b = a } foo;
 // Each enumeration constant has scope that begins just after the
 // appearance of its defining enumerator in an enumerator list.
     |};
-[%expect {||}]
+[%expect {|
+  ((Declaration
+    (Typedef
+     (specifiers
+      (Unique
+       (A Typedef
+        (Eq
+         (Enum
+          (Defined (name ())
+           (values (((name a) (value ())) ((name b) (value ((Var a))))))))
+         ()))))
+     (declarators ((Plain (Identifier foo)))))))
+  |}]
 
 let%expect_test "enum_constant_visibility" =
   test
@@ -562,7 +1561,56 @@ void f(void) {
   int y = U - T;
 }
     |};
-[%expect {||}]
+[%expect {|
+  ((Declaration
+    (Typedef (specifiers (Nonunique (A Typedef (Eq Int ()))))
+     (declarators ((Plain (Identifier T))))))
+   (Function
+    ((specifiers (Unique (Eq Void ())))
+     (declarator
+      (Function (declarator (Identifier f))
+       (parameters
+        (First
+         ((declarations
+           ((Abstract (specifiers (Unique (Eq Void ()))) (declarator ()))))
+          (ellipsis false))))))
+     (arguments ())
+     (body
+      ((Declaration
+        (Normal (specifiers (Nonunique (Eq Int ())))
+         (init_declarators ((Plain (Identifier x))))))
+       (Statement
+        (Expression
+         ((Binary (operator (Assignment Plain)) (left (Var x))
+           (right
+            (Binary (operator (Additive Plus))
+             (left
+              (Cast
+               (type_name
+                ((specifier_qualifiers
+                  (Unique
+                   (Eq
+                    (Enum
+                     (Defined (name ())
+                      (values
+                       (((name T) (value ()))
+                        ((name U)
+                         (value
+                          ((Binary (operator (Additive Plus)) (left (Var T))
+                            (right (Constant (Integer 1)))))))))))
+                    ())))
+                 (abstract_declarator ())))
+               (operand (Constant (Integer 1)))))
+             (right (Var T))))))))
+       (Declaration
+        (Normal (specifiers (Nonunique (Eq Int ())))
+         (init_declarators
+          ((With_initializer (declarator (Identifier y))
+            (initializer_
+             (Expression
+              (Binary (operator (Additive Minus)) (left (Var U))
+               (right (Var T)))))))))))))))
+  |}]
 
 let%expect_test "enum_shadows_typedef" =
   test
@@ -576,7 +1624,52 @@ void f(void) {
   x = (int)T;
 }
     |};
-[%expect {||}]
+[%expect {|
+  ((Declaration
+    (Typedef (specifiers (Nonunique (A Typedef (Eq Int ()))))
+     (declarators ((Plain (Identifier T))))))
+   (Function
+    ((specifiers (Unique (Eq Void ())))
+     (declarator
+      (Function (declarator (Identifier f))
+       (parameters
+        (First
+         ((declarations
+           ((Abstract (specifiers (Unique (Eq Void ()))) (declarator ()))))
+          (ellipsis false))))))
+     (arguments ())
+     (body
+      ((Declaration
+        (Normal (specifiers (Nonunique (Eq Int ())))
+         (init_declarators
+          ((With_initializer (declarator (Identifier x))
+            (initializer_
+             (Expression
+              (Cast
+               (type_name
+                ((specifier_qualifiers (Nonunique (Eq Int ())))
+                 (abstract_declarator ())))
+               (operand
+                (Cast
+                 (type_name
+                  ((specifier_qualifiers
+                    (Unique
+                     (Eq
+                      (Enum
+                       (Defined (name ()) (values (((name T) (value ()))))))
+                      ())))
+                   (abstract_declarator ())))
+                 (operand (Constant (Integer 1)))))))))))))
+       (Statement
+        (Expression
+         ((Binary (operator (Assignment Plain)) (left (Var x))
+           (right
+            (Cast
+             (type_name
+              ((specifier_qualifiers (Nonunique (Eq Int ())))
+               (abstract_declarator ())))
+             (operand (Var T)))))))))))))
+  |}]
 
 let%expect_test "enum-trick" =
   test
@@ -591,7 +1684,20 @@ int main(int argc, char *argv[]) {
 // Each enumeration constant has scope that begins just after the
 // appearance of its defining enumerator in an enumerator list.
     |};
-[%expect {||}]
+[%expect.unreachable]
+[@@expect.uncaught_exn {|
+  (* CR expect_test_collector: This test expectation appears to contain a backtrace.
+     This is strongly discouraged as backtraces are fragile.
+     Please change this test to not include a backtrace. *)
+  (Failure "Lexer error")
+  Raised at Stdlib.failwith in file "stdlib.ml", line 29, characters 17-33
+  Called from C11lexer.lexer in file "lexer/c11lexer.ml", line 418, characters 16-28
+  Called from C11parser__Parser.Make.wrap.(fun).lexer in file "parser/parser.ml", line 21, characters 18-45
+  Called from C11parser__Parser_raw.Make._menhir_run_383 in file "parser/parser_raw.ml", line 16026, characters 19-47
+  Called from Testing__Include.test in file "testing/include.ml", line 12, characters 12-42
+  Called from Testing__Previous_tests.(fun) in file "testing/previous_tests.ml", lines 1675-1686, characters 2-6
+  Called from Ppx_expect_runtime__Test_block.Configured.dump_backtrace in file "runtime/test_block.ml", line 142, characters 10-28
+  |}]
 
 let%expect_test "expressions" =
   test
@@ -628,7 +1734,19 @@ void test_sizeof(){
   (void)sizeof(arr)[0];
 }
     |};
-[%expect {||}]
+[%expect.unreachable]
+[@@expect.uncaught_exn {|
+  (* CR expect_test_collector: This test expectation appears to contain a backtrace.
+     This is strongly discouraged as backtraces are fragile.
+     Please change this test to not include a backtrace. *)
+  (Failure "")
+  Raised at Stdlib.failwith in file "stdlib.ml", line 29, characters 17-33
+  Called from C11parser__Parser_raw.Make._menhir_action_218 in file "parser/parser_raw.mly" (inlined), line 343, characters 4-18
+  Called from C11parser__Parser_raw.Make._menhir_run_367 in file "parser/parser_raw.ml", line 13530, characters 17-56
+  Called from Testing__Include.test in file "testing/include.ml", line 12, characters 12-42
+  Called from Testing__Previous_tests.(fun) in file "testing/previous_tests.ml", lines 1703-1736, characters 2-6
+  Called from Ppx_expect_runtime__Test_block.Configured.dump_backtrace in file "runtime/test_block.ml", line 142, characters 10-28
+  |}]
 
 let%expect_test "function-decls" =
   test
@@ -640,7 +1758,90 @@ void foo() {
   X = sizeof(void (*(*)(int arga, void (*argb)(double Y)))(void* Z));
 }
     |};
-[%expect {||}]
+[%expect {|
+  ((Function
+    ((specifiers (Unique (Eq Void ())))
+     (declarator
+      (Function (declarator (Identifier foo)) (parameters (Second ()))))
+     (arguments ())
+     (body
+      ((Declaration
+        (Normal (specifiers (Nonunique (Eq Int ())))
+         (init_declarators ((Plain (Identifier X))))))
+       (Statement
+        (Expression
+         ((Binary (operator (Assignment Plain)) (left (Var X))
+           (right
+            (Sizeof
+             ((specifier_qualifiers (Unique (Eq Void ())))
+              (abstract_declarator
+               ((Direct (pointer ())
+                 (direct
+                  (Function
+                   (declarator
+                    ((Abstract
+                      (Direct (pointer (Value))
+                       (direct
+                        (Function (declarator ((Abstract (Pointer Value))))
+                         (parameters ((declarations ()) (ellipsis false)))))))))
+                   (parameters ((declarations ()) (ellipsis false)))))))))))))))
+       (Statement
+        (Expression
+         ((Binary (operator (Assignment Plain)) (left (Var X))
+           (right
+            (Sizeof
+             ((specifier_qualifiers (Nonunique (Eq Int ())))
+              (abstract_declarator
+               ((Direct (pointer ())
+                 (direct
+                  (Function (declarator ((Abstract (Pointer Value))))
+                   (parameters
+                    ((declarations
+                      ((Abstract (specifiers (Nonunique (Eq Int ())))
+                        (declarator ()))
+                       (Abstract (specifiers (Nonunique (Eq Float ())))
+                        (declarator ()))))
+                     (ellipsis true)))))))))))))))
+       (Statement
+        (Expression
+         ((Binary (operator (Assignment Plain)) (left (Var X))
+           (right
+            (Sizeof
+             ((specifier_qualifiers (Unique (Eq Void ())))
+              (abstract_declarator
+               ((Direct (pointer ())
+                 (direct
+                  (Function
+                   (declarator
+                    ((Abstract
+                      (Direct (pointer (Value))
+                       (direct
+                        (Function (declarator ((Abstract (Pointer Value))))
+                         (parameters
+                          ((declarations
+                            ((Declarator (specifiers (Nonunique (Eq Int ())))
+                              (declarator (Identifier arga)))
+                             (Declarator (specifiers (Unique (Eq Void ())))
+                              (declarator
+                               (Function
+                                (declarator
+                                 (Pointer (pointer Value)
+                                  (inner (Identifier argb))))
+                                (parameters
+                                 (First
+                                  ((declarations
+                                    ((Declarator
+                                      (specifiers (Nonunique (Eq Double ())))
+                                      (declarator (Identifier Y)))))
+                                   (ellipsis false)))))))))
+                           (ellipsis false)))))))))
+                   (parameters
+                    ((declarations
+                      ((Declarator (specifiers (Unique (Eq Void ())))
+                        (declarator
+                         (Pointer (pointer Value) (inner (Identifier Z)))))))
+                     (ellipsis false))))))))))))))))))))
+  |}]
 
 let%expect_test "function_parameter_scope" =
   test
@@ -652,7 +1853,63 @@ enum {V} (*f(T T, enum {U} y, int x[T+U]))(T t);
   // (long, enum{U}, ptr(int)) -> ptr (long -> enum{V})
 T x[(U)V+1]; // T and U again denote types; V remains visible
     |};
-[%expect {||}]
+[%expect {|
+  ((Declaration
+    (Typedef (specifiers (Nonunique (A Typedef (Eq Long ()))))
+     (declarators ((Plain (Identifier T)) (Plain (Identifier U))))))
+   (Declaration
+    (Normal
+     (specifiers
+      (Unique
+       (Eq (Enum (Defined (name ()) (values (((name V) (value ())))))) ())))
+     (init_declarators
+      ((Plain
+        (Function
+         (declarator
+          (Pointer (pointer Value)
+           (inner
+            (Function (declarator (Identifier f))
+             (parameters
+              (First
+               ((declarations
+                 ((Declarator (specifiers (Unique (Eq (Name T) ())))
+                   (declarator (Identifier T)))
+                  (Declarator
+                   (specifiers
+                    (Unique
+                     (Eq
+                      (Enum
+                       (Defined (name ()) (values (((name U) (value ()))))))
+                      ())))
+                   (declarator (Identifier y)))
+                  (Declarator (specifiers (Nonunique (Eq Int ())))
+                   (declarator
+                    (Array (declarator (Identifier x)) (qualifiers ())
+                     (size
+                      ((Binary (operator (Additive Plus)) (left (Var T))
+                        (right (Var U))))))))))
+                (ellipsis false))))))))
+         (parameters
+          (First
+           ((declarations
+             ((Declarator (specifiers (Unique (Eq (Name T) ())))
+               (declarator (Identifier t)))))
+            (ellipsis false))))))))))
+   (Declaration
+    (Normal (specifiers (Unique (Eq (Name T) ())))
+     (init_declarators
+      ((Plain
+        (Array (declarator (Identifier x)) (qualifiers ())
+         (size
+          ((Binary (operator (Additive Plus))
+            (left
+             (Cast
+              (type_name
+               ((specifier_qualifiers (Unique (Eq (Name U) ())))
+                (abstract_declarator ())))
+              (operand (Var V))))
+            (right (Constant (Integer 1)))))))))))))
+  |}]
 
 let%expect_test "function_parameter_scope_extends" =
   test
@@ -666,7 +1923,68 @@ enum {V} (*f(T T, enum {U} y, int x[T+U]))(T t) {
   return 0;
 }
     |};
-[%expect {||}]
+[%expect {|
+  ((Declaration
+    (Typedef (specifiers (Nonunique (A Typedef (Eq Long ()))))
+     (declarators ((Plain (Identifier T)) (Plain (Identifier U))))))
+   (Function
+    ((specifiers
+      (Unique
+       (Eq (Enum (Defined (name ()) (values (((name V) (value ())))))) ())))
+     (declarator
+      (Function
+       (declarator
+        (Pointer (pointer Value)
+         (inner
+          (Function (declarator (Identifier f))
+           (parameters
+            (First
+             ((declarations
+               ((Declarator (specifiers (Unique (Eq (Name T) ())))
+                 (declarator (Identifier T)))
+                (Declarator
+                 (specifiers
+                  (Unique
+                   (Eq
+                    (Enum (Defined (name ()) (values (((name U) (value ()))))))
+                    ())))
+                 (declarator (Identifier y)))
+                (Declarator (specifiers (Nonunique (Eq Int ())))
+                 (declarator
+                  (Array (declarator (Identifier x)) (qualifiers ())
+                   (size
+                    ((Binary (operator (Additive Plus)) (left (Var T))
+                      (right (Var U))))))))))
+              (ellipsis false))))))))
+       (parameters
+        (First
+         ((declarations
+           ((Declarator (specifiers (Unique (Eq (Name T) ())))
+             (declarator (Identifier t)))))
+          (ellipsis false))))))
+     (arguments ())
+     (body
+      ((Declaration
+        (Normal (specifiers (Nonunique (Eq Long ())))
+         (init_declarators
+          ((With_initializer (declarator (Identifier l))
+            (initializer_
+             (Expression
+              (Binary (operator (Additive Plus))
+               (left
+                (Binary (operator (Additive Plus))
+                 (left
+                  (Binary (operator (Additive Plus))
+                   (left
+                    (Binary (operator (Additive Plus)) (left (Var T))
+                     (right (Var U))))
+                   (right (Var V))))
+                 (right
+                  (Array_subscript (array (Var x))
+                   (index (Constant (Integer 0)))))))
+               (right (Var y))))))))))
+       (Statement (Jump (Return ((Constant (Integer 0)))))))))))
+  |}]
 
 let%expect_test "if_scopes" =
   test
@@ -689,7 +2007,83 @@ void f(void) {
   T t; U u;
 }
     |};
-[%expect {||}]
+[%expect {|
+  ((Declaration
+    (Typedef (specifiers (Nonunique (A Typedef (Eq Int ()))))
+     (declarators ((Plain (Identifier T)) (Plain (Identifier U))))))
+   (Declaration
+    (Normal (specifiers (Nonunique (Eq Int ())))
+     (init_declarators ((Plain (Identifier x))))))
+   (Function
+    ((specifiers (Unique (Eq Void ())))
+     (declarator
+      (Function (declarator (Identifier f))
+       (parameters
+        (First
+         ((declarations
+           ((Abstract (specifiers (Unique (Eq Void ()))) (declarator ()))))
+          (ellipsis false))))))
+     (arguments ())
+     (body
+      ((Statement
+        (Selection
+         (If
+          (condition
+           (Sizeof
+            ((specifier_qualifiers
+              (Unique
+               (Eq (Enum (Defined (name ()) (values (((name T) (value ()))))))
+                ())))
+             (abstract_declarator ()))))
+          (then_
+           (Expression
+            ((Binary (operator (Assignment Plain)) (left (Var x))
+              (right
+               (Binary (operator (Additive Plus))
+                (left
+                 (Sizeof
+                  ((specifier_qualifiers
+                    (Unique
+                     (Eq
+                      (Enum
+                       (Defined (name ()) (values (((name U) (value ()))))))
+                      ())))
+                   (abstract_declarator ()))))
+                (right (Var T))))))))
+          (else_
+           ((Compound
+             ((Declaration
+               (Normal (specifiers (Unique (Eq (Name U) ())))
+                (init_declarators
+                 ((With_initializer (declarator (Identifier u))
+                   (initializer_
+                    (Expression
+                     (Cast
+                      (type_name
+                       ((specifier_qualifiers (Nonunique (Eq Int ())))
+                        (abstract_declarator ())))
+                      (operand (Var T)))))))))))))))))
+       (Statement
+        (Selection
+         (Switch
+          (condition
+           (Sizeof
+            ((specifier_qualifiers
+              (Unique
+               (Eq (Enum (Defined (name ()) (values (((name U) (value ()))))))
+                ())))
+             (abstract_declarator ()))))
+          (body
+           (Expression
+            ((Binary (operator (Assignment Plain)) (left (Var x))
+              (right (Var U)))))))))
+       (Declaration
+        (Normal (specifiers (Unique (Eq (Name T) ())))
+         (init_declarators ((Plain (Identifier t))))))
+       (Declaration
+        (Normal (specifiers (Unique (Eq (Name U) ())))
+         (init_declarators ((Plain (Identifier u)))))))))))
+  |}]
 
 let%expect_test "local_scope" =
   test
@@ -705,7 +2099,45 @@ void f(void) {
   T x = 1; // T is a type again
 }
     |};
-[%expect {||}]
+[%expect {|
+  ((Declaration
+    (Typedef (specifiers (Nonunique (A Typedef (Eq Int ()))))
+     (declarators ((Plain (Identifier T))))))
+   (Function
+    ((specifiers (Unique (Eq Void ())))
+     (declarator
+      (Function (declarator (Identifier f))
+       (parameters
+        (First
+         ((declarations
+           ((Abstract (specifiers (Unique (Eq Void ()))) (declarator ()))))
+          (ellipsis false))))))
+     (arguments ())
+     (body
+      ((Declaration
+        (Normal (specifiers (Unique (Eq (Name T) ())))
+         (init_declarators
+          ((With_initializer (declarator (Identifier y))
+            (initializer_ (Expression (Constant (Integer 1)))))))))
+       (Statement
+        (Selection
+         (If (condition (Constant (Integer 1)))
+          (then_
+           (Compound
+            ((Declaration
+              (Normal (specifiers (Nonunique (Eq Int ())))
+               (init_declarators ((Plain (Identifier T))))))
+             (Statement
+              (Expression
+               ((Binary (operator (Assignment Plain)) (left (Var T))
+                 (right (Constant (Integer 1))))))))))
+          (else_ ()))))
+       (Declaration
+        (Normal (specifiers (Unique (Eq (Name T) ())))
+         (init_declarators
+          ((With_initializer (declarator (Identifier x))
+            (initializer_ (Expression (Constant (Integer 1))))))))))))))
+  |}]
 
 let%expect_test "local_typedef" =
   test
@@ -720,7 +2152,40 @@ void f(void) {
   x2 = 0;
 }
     |};
-[%expect {||}]
+[%expect {|
+  ((Declaration
+    (Typedef (specifiers (Nonunique (A Typedef (Eq Int ()))))
+     (declarators ((Plain (Identifier T1))))))
+   (Function
+    ((specifiers (Unique (Eq Void ())))
+     (declarator
+      (Function (declarator (Identifier f))
+       (parameters
+        (First
+         ((declarations
+           ((Abstract (specifiers (Unique (Eq Void ()))) (declarator ()))))
+          (ellipsis false))))))
+     (arguments ())
+     (body
+      ((Declaration
+        (Typedef (specifiers (Nonunique (A Typedef (Eq Int ()))))
+         (declarators
+          ((Plain (Pointer (pointer Value) (inner (Identifier T2))))))))
+       (Declaration
+        (Normal (specifiers (Unique (Eq (Name T1) ())))
+         (init_declarators ((Plain (Identifier x1))))))
+       (Declaration
+        (Normal (specifiers (Unique (Eq (Name T2) ())))
+         (init_declarators ((Plain (Identifier x2))))))
+       (Statement
+        (Expression
+         ((Binary (operator (Assignment Plain)) (left (Var x1))
+           (right (Constant (Integer 0)))))))
+       (Statement
+        (Expression
+         ((Binary (operator (Assignment Plain)) (left (Var x2))
+           (right (Constant (Integer 0))))))))))))
+  |}]
 
 let%expect_test "long-long-struct" =
   test
@@ -729,7 +2194,22 @@ typedef struct {
   long long foo;
 } mystruct;
     |};
-[%expect {||}]
+[%expect {|
+  ((Declaration
+    (Typedef
+     (specifiers
+      (Unique
+       (A Typedef
+        (Eq
+         (Struct_or_union
+          (Defined (kind Struct) (name ())
+           (declaration
+            ((Declarations
+              (specifier_qualifiers (Nonunique (A Long (Eq Long ()))))
+              (declarators ((Declarator (Identifier foo)))))))))
+         ()))))
+     (declarators ((Plain (Identifier mystruct)))))))
+  |}]
 
 let%expect_test "loop_scopes" =
   test
@@ -750,7 +2230,126 @@ void f(void) {
   T u3; U u4;
 }
     |};
-[%expect {||}]
+[%expect {|
+  ((Declaration
+    (Typedef (specifiers (Nonunique (A Typedef (Eq Int ()))))
+     (declarators ((Plain (Identifier T)) (Plain (Identifier U))))))
+   (Declaration
+    (Normal (specifiers (Nonunique (Eq Int ())))
+     (init_declarators ((Plain (Identifier x))))))
+   (Function
+    ((specifiers (Unique (Eq Void ())))
+     (declarator
+      (Function (declarator (Identifier f))
+       (parameters
+        (First
+         ((declarations
+           ((Abstract (specifiers (Unique (Eq Void ()))) (declarator ()))))
+          (ellipsis false))))))
+     (arguments ())
+     (body
+      ((Statement
+        (Iteration
+         (For_decl
+          (declarator
+           (Normal (specifiers (Nonunique (Eq Int ())))
+            (init_declarators
+             ((With_initializer (declarator (Identifier T))
+               (initializer_ (Expression (Constant (Integer 0)))))))))
+          (condition
+           ((Sizeof
+             ((specifier_qualifiers
+               (Unique
+                (Eq (Enum (Defined (name ()) (values (((name U) (value ()))))))
+                 ())))
+              (abstract_declarator ())))))
+          (increment ())
+          (body
+           (Expression
+            ((Binary (operator (Assignment Plain)) (left (Var x))
+              (right
+               (Binary (operator (Additive Plus)) (left (Var U))
+                (right (Var T)))))))))))
+       (Statement
+        (Iteration
+         (For_expr
+          (init
+           ((Sizeof
+             ((specifier_qualifiers
+               (Unique
+                (Eq (Enum (Defined (name ()) (values (((name U) (value ()))))))
+                 ())))
+              (abstract_declarator ())))))
+          (condition ()) (increment ())
+          (body
+           (Expression
+            ((Binary (operator (Assignment Plain)) (left (Var x))
+              (right
+               (Binary (operator (Additive Plus)) (left (Var U))
+                (right
+                 (Sizeof
+                  ((specifier_qualifiers
+                    (Unique
+                     (Eq
+                      (Enum
+                       (Defined (name ()) (values (((name T) (value ()))))))
+                      ())))
+                   (abstract_declarator ())))))))))))))
+       (Statement
+        (Iteration
+         (While
+          (condition
+           (Sizeof
+            ((specifier_qualifiers
+              (Unique
+               (Eq (Enum (Defined (name ()) (values (((name U) (value ()))))))
+                ())))
+             (abstract_declarator ()))))
+          (body
+           (Expression
+            ((Binary (operator (Assignment Plain)) (left (Var x))
+              (right (Var U)))))))))
+       (Statement
+        (Iteration
+         (Do
+          (condition
+           (Binary (operator (Additive Plus))
+            (left
+             (Cast
+              (type_name
+               ((specifier_qualifiers (Unique (Eq (Name U) ())))
+                (abstract_declarator ())))
+              (operand (Constant (Integer 1)))))
+            (right
+             (Sizeof
+              ((specifier_qualifiers
+                (Unique
+                 (Eq
+                  (Enum (Defined (name ()) (values (((name U) (value ()))))))
+                  ())))
+               (abstract_declarator ()))))))
+          (body
+           (Expression
+            ((Binary (operator (Assignment Plain)) (left (Var x))
+              (right
+               (Binary (operator (Additive Plus))
+                (left
+                 (Sizeof
+                  ((specifier_qualifiers
+                    (Unique
+                     (Eq
+                      (Enum
+                       (Defined (name ()) (values (((name U) (value ()))))))
+                      ())))
+                   (abstract_declarator ()))))
+                (right (Var U)))))))))))
+       (Declaration
+        (Normal (specifiers (Unique (Eq (Name T) ())))
+         (init_declarators ((Plain (Identifier u3))))))
+       (Declaration
+        (Normal (specifiers (Unique (Eq (Name U) ())))
+         (init_declarators ((Plain (Identifier u4)))))))))))
+  |}]
 
 let%expect_test "namespaces" =
   test
@@ -770,7 +2369,88 @@ void f(void) {
   S ss = 1; T tt = 1; U uu = 1;
 }
     |};
-[%expect {||}]
+[%expect {|
+  ((Declaration
+    (Typedef (specifiers (Nonunique (A Typedef (Eq Int ()))))
+     (declarators
+      ((Plain (Identifier S)) (Plain (Identifier T)) (Plain (Identifier U))))))
+   (Declaration
+    (Normal
+     (specifiers
+      (Unique
+       (Eq
+        (Struct_or_union
+         (Defined (kind Struct) (name (S))
+          (declaration
+           ((Declarations (specifier_qualifiers (Nonunique (Eq Int ())))
+             (declarators ((Declarator (Identifier T)))))))))
+        ())))
+     (init_declarators ())))
+   (Declaration
+    (Normal
+     (specifiers
+      (Unique
+       (Eq
+        (Struct_or_union
+         (Defined (kind Union) (name (U))
+          (declaration
+           ((Declarations (specifier_qualifiers (Nonunique (Eq Int ())))
+             (declarators ((Declarator (Identifier x)))))))))
+        ())))
+     (init_declarators ())))
+   (Function
+    ((specifiers (Unique (Eq Void ())))
+     (declarator
+      (Function (declarator (Identifier f))
+       (parameters
+        (First
+         ((declarations
+           ((Abstract (specifiers (Unique (Eq Void ()))) (declarator ()))))
+          (ellipsis false))))))
+     (arguments ())
+     (body
+      ((Declaration
+        (Normal
+         (specifiers
+          (Unique (Eq (Struct_or_union (Named (kind Struct) (name S))) ())))
+         (init_declarators
+          ((With_initializer (declarator (Identifier s))
+            (initializer_
+             (Initializer_list
+              ((((Field T)) (Expression (Constant (Integer 1))))))))))))
+       (Statement
+        (Labeled
+         (Label (name T)
+          (statement
+           (Expression
+            ((Binary (operator (Assignment Plain))
+              (left (Dot (receiver (Var s)) (field T)))
+              (right (Constant (Integer 2))))))))))
+       (Declaration
+        (Normal
+         (specifiers
+          (Unique (Eq (Struct_or_union (Named (kind Union) (name U))) ())))
+         (init_declarators
+          ((With_initializer (declarator (Identifier u))
+            (initializer_
+             (Initializer_list ((() (Expression (Constant (Integer 1))))))))))))
+       (Statement (Jump (Goto T)))
+       (Declaration
+        (Normal (specifiers (Unique (Eq (Name S) ())))
+         (init_declarators
+          ((With_initializer (declarator (Identifier ss))
+            (initializer_ (Expression (Constant (Integer 1)))))))))
+       (Declaration
+        (Normal (specifiers (Unique (Eq (Name T) ())))
+         (init_declarators
+          ((With_initializer (declarator (Identifier tt))
+            (initializer_ (Expression (Constant (Integer 1)))))))))
+       (Declaration
+        (Normal (specifiers (Unique (Eq (Name U) ())))
+         (init_declarators
+          ((With_initializer (declarator (Identifier uu))
+            (initializer_ (Expression (Constant (Integer 1))))))))))))))
+  |}]
 
 let%expect_test "no_local_scope" =
   test
@@ -786,7 +2466,68 @@ int f(void) {
   x = T + U + V;
 }
     |};
-[%expect {||}]
+[%expect {|
+  ((Declaration
+    (Typedef (specifiers (Nonunique (A Typedef (Eq Int ()))))
+     (declarators
+      ((Plain (Identifier T)) (Plain (Identifier U)) (Plain (Identifier V))))))
+   (Declaration
+    (Normal (specifiers (Nonunique (Eq Int ())))
+     (init_declarators ((Plain (Identifier x))))))
+   (Function
+    ((specifiers (Nonunique (Eq Int ())))
+     (declarator
+      (Function (declarator (Identifier f))
+       (parameters
+        (First
+         ((declarations
+           ((Abstract (specifiers (Unique (Eq Void ()))) (declarator ()))))
+          (ellipsis false))))))
+     (arguments ())
+     (body
+      ((Statement
+        (Expression
+         ((Binary (operator (Assignment Plain)) (left (Var x))
+           (right
+            (Sizeof
+             ((specifier_qualifiers
+               (Unique
+                (Eq (Enum (Defined (name ()) (values (((name T) (value ()))))))
+                 ())))
+              (abstract_declarator ()))))))))
+       (Statement
+        (Labeled
+         (Label (name label)
+          (statement
+           (Expression
+            ((Binary (operator (Assignment Plain)) (left (Var x))
+              (right
+               (Sizeof
+                ((specifier_qualifiers
+                  (Unique
+                   (Eq
+                    (Enum (Defined (name ()) (values (((name U) (value ()))))))
+                    ())))
+                 (abstract_declarator ())))))))))))
+       (Statement
+        (Jump
+         (Return
+          ((Sizeof
+            ((specifier_qualifiers
+              (Unique
+               (Eq (Enum (Defined (name ()) (values (((name V) (value ()))))))
+                ())))
+             (abstract_declarator ())))))))
+       (Statement
+        (Expression
+         ((Binary (operator (Assignment Plain)) (left (Var x))
+           (right
+            (Binary (operator (Additive Plus))
+             (left
+              (Binary (operator (Additive Plus)) (left (Var T))
+               (right (Var U))))
+             (right (Var V)))))))))))))
+  |}]
 
 let%expect_test "parameter_declaration_ambiguity" =
   test
@@ -798,7 +2539,34 @@ void f(int(x), int(T), int T);
 // Second parameter: anonymous, of type int(T) (i.e., T -> int)
 // Third parameter: named T, of type int
     |};
-[%expect {||}]
+[%expect {|
+  ((Declaration
+    (Typedef (specifiers (Nonunique (A Typedef (Eq Int ()))))
+     (declarators ((Plain (Identifier T))))))
+   (Declaration
+    (Normal (specifiers (Unique (Eq Void ())))
+     (init_declarators
+      ((Plain
+        (Function (declarator (Identifier f))
+         (parameters
+          (First
+           ((declarations
+             ((Declarator (specifiers (Nonunique (Eq Int ())))
+               (declarator (Identifier x)))
+              (Abstract (specifiers (Nonunique (Eq Int ())))
+               (declarator
+                ((Direct (pointer ())
+                  (direct
+                   (Function (declarator ())
+                    (parameters
+                     ((declarations
+                       ((Abstract (specifiers (Unique (Eq (Name T) ())))
+                         (declarator ()))))
+                      (ellipsis false)))))))))
+              (Declarator (specifiers (Nonunique (Eq Int ())))
+               (declarator (Identifier T)))))
+            (ellipsis false)))))))))))
+  |}]
 
 let%expect_test "parameter_declaration_ambiguity.test" =
   test
@@ -807,7 +2575,32 @@ typedef int T;
 
 void f(int(T), T x);
     |};
-[%expect {||}]
+[%expect {|
+  ((Declaration
+    (Typedef (specifiers (Nonunique (A Typedef (Eq Int ()))))
+     (declarators ((Plain (Identifier T))))))
+   (Declaration
+    (Normal (specifiers (Unique (Eq Void ())))
+     (init_declarators
+      ((Plain
+        (Function (declarator (Identifier f))
+         (parameters
+          (First
+           ((declarations
+             ((Abstract (specifiers (Nonunique (Eq Int ())))
+               (declarator
+                ((Direct (pointer ())
+                  (direct
+                   (Function (declarator ())
+                    (parameters
+                     ((declarations
+                       ((Abstract (specifiers (Unique (Eq (Name T) ())))
+                         (declarator ()))))
+                      (ellipsis false)))))))))
+              (Declarator (specifiers (Unique (Eq (Name T) ())))
+               (declarator (Identifier x)))))
+            (ellipsis false)))))))))))
+  |}]
 
 let%expect_test "statements" =
   test
@@ -851,7 +2644,167 @@ void test5() {
   if (0);
 }
     |};
-[%expect {||}]
+[%expect {|
+  ((Function
+    ((specifiers (Unique (Eq Void ())))
+     (declarator
+      (Function (declarator (Identifier test1)) (parameters (Second ()))))
+     (arguments ())
+     (body
+      ((Statement
+        (Compound
+         ((Statement (Expression ()))
+          (Statement
+           (Compound ((Statement (Expression ())) (Statement (Expression ()))))))))
+       (Statement (Expression ())) (Statement (Expression ()))))))
+   (Function
+    ((specifiers (Unique (Eq Void ())))
+     (declarator
+      (Function (declarator (Identifier test2)) (parameters (Second ()))))
+     (arguments ())
+     (body
+      ((Statement
+        (Selection
+         (If (condition (Constant (Integer 0)))
+          (then_
+           (Compound
+            ((Statement
+              (Selection
+               (If (condition (Constant (Integer 1))) (then_ (Compound ()))
+                (else_ ())))))))
+          (else_ ((Compound ()))))))
+       (Statement
+        (Iteration
+         (Do (condition (Constant (Integer 0))) (body (Compound ())))))
+       (Statement
+        (Iteration
+         (While (condition (Constant (Integer 0)))
+          (body
+           (Iteration
+            (While (condition (Constant (Integer 0)))
+             (body
+              (Iteration
+               (Do (condition (Constant (Integer 0))) (body (Expression ())))))))))))
+       (Statement
+        (Iteration
+         (For_expr
+          (init
+           ((Cast
+             (type_name
+              ((specifier_qualifiers (Unique (Eq Void ())))
+               (abstract_declarator ())))
+             (operand (Constant (Integer 0))))))
+          (condition ((Constant (Integer 0))))
+          (increment
+           ((Cast
+             (type_name
+              ((specifier_qualifiers (Unique (Eq Void ())))
+               (abstract_declarator ())))
+             (operand (Constant (Integer 0))))))
+          (body
+           (Iteration
+            (For_expr (init ()) (condition ()) (increment ())
+             (body
+              (Iteration
+               (For_expr
+                (init
+                 ((Cast
+                   (type_name
+                    ((specifier_qualifiers (Unique (Eq Void ())))
+                     (abstract_declarator ())))
+                   (operand (Constant (Integer 9))))))
+                (condition ((Constant (Integer 0))))
+                (increment
+                 ((Cast
+                   (type_name
+                    ((specifier_qualifiers (Unique (Eq Void ())))
+                     (abstract_declarator ())))
+                   (operand (Constant (Integer 2))))))
+                (body (Expression ())))))))))))
+       (Statement
+        (Iteration
+         (For_decl
+          (declarator
+           (Normal (specifiers (Nonunique (Eq Int ())))
+            (init_declarators
+             ((With_initializer (declarator (Identifier X))
+               (initializer_ (Expression (Constant (Integer 0)))))))))
+          (condition ((Constant (Integer 0))))
+          (increment
+           ((Cast
+             (type_name
+              ((specifier_qualifiers (Unique (Eq Void ())))
+               (abstract_declarator ())))
+             (operand (Constant (Integer 0))))))
+          (body (Expression ())))))))))
+   (Function
+    ((specifiers (Unique (Eq Void ())))
+     (declarator
+      (Function (declarator (Identifier test3)) (parameters (Second ()))))
+     (arguments ())
+     (body
+      ((Statement
+        (Selection
+         (Switch (condition (Constant (Integer 0)))
+          (body
+           (Compound
+            ((Statement
+              (Labeled
+               (Case (expression (Constant (Integer 4)))
+                (statement
+                 (Selection
+                  (If (condition (Constant (Integer 0)))
+                   (then_
+                    (Compound
+                     ((Statement
+                       (Labeled
+                        (Case (expression (Constant (Integer 6)))
+                         (statement (Expression ()))))))))
+                   (else_ ())))))))
+             (Statement (Labeled (Default (statement (Expression ())))))))))))))))
+   (Function
+    ((specifiers (Unique (Eq Void ())))
+     (declarator
+      (Function (declarator (Identifier test4)) (parameters (Second ()))))
+     (arguments ())
+     (body
+      ((Statement
+        (Selection
+         (If (condition (Constant (Integer 0))) (then_ (Expression ()))
+          (else_ ()))))
+       (Declaration
+        (Normal (specifiers (Nonunique (Eq Int ())))
+         (init_declarators ((Plain (Identifier X))))))
+       (Statement
+        (Labeled
+         (Label (name foo)
+          (statement
+           (Selection
+            (If (condition (Constant (Integer 0))) (then_ (Expression ()))
+             (else_ ())))))))))))
+   (Declaration
+    (Typedef (specifiers (Nonunique (A Typedef (Eq Int ()))))
+     (declarators ((Plain (Identifier t))))))
+   (Function
+    ((specifiers (Unique (Eq Void ())))
+     (declarator
+      (Function (declarator (Identifier test5)) (parameters (Second ()))))
+     (arguments ())
+     (body
+      ((Statement
+        (Selection
+         (If (condition (Constant (Integer 0))) (then_ (Expression ()))
+          (else_ ()))))
+       (Declaration
+        (Normal (specifiers (Unique (Eq (Name t) ())))
+         (init_declarators
+          ((With_initializer (declarator (Identifier x))
+            (initializer_ (Expression (Constant (Integer 0)))))))))
+       (Statement
+        (Selection
+         (If (condition (Constant (Integer 0))) (then_ (Expression ()))
+          (else_ ())))))))))
+  |}]
 
 let%expect_test "struct-recursion" =
   test
@@ -868,7 +2821,50 @@ struct s2 { struct s1 *B; };
 struct s1 a;
 struct s2 b;
     |};
-[%expect {||}]
+[%expect {|
+  ((Declaration
+    (Normal
+     (specifiers
+      (Unique
+       (Eq
+        (Struct_or_union
+         (Defined (kind Struct) (name (s1))
+          (declaration
+           ((Declarations
+             (specifier_qualifiers
+              (Unique
+               (Eq (Struct_or_union (Named (kind Struct) (name s2))) ())))
+             (declarators
+              ((Declarator (Pointer (pointer Value) (inner (Identifier A)))))))))))
+        ())))
+     (init_declarators ())))
+   (Declaration
+    (Normal
+     (specifiers
+      (Unique
+       (Eq
+        (Struct_or_union
+         (Defined (kind Struct) (name (s2))
+          (declaration
+           ((Declarations
+             (specifier_qualifiers
+              (Unique
+               (Eq (Struct_or_union (Named (kind Struct) (name s1))) ())))
+             (declarators
+              ((Declarator (Pointer (pointer Value) (inner (Identifier B)))))))))))
+        ())))
+     (init_declarators ())))
+   (Declaration
+    (Normal
+     (specifiers
+      (Unique (Eq (Struct_or_union (Named (kind Struct) (name s1))) ())))
+     (init_declarators ((Plain (Identifier a))))))
+   (Declaration
+    (Normal
+     (specifiers
+      (Unique (Eq (Struct_or_union (Named (kind Struct) (name s2))) ())))
+     (init_declarators ((Plain (Identifier b)))))))
+  |}]
 
 let%expect_test "typedef_star" =
   test
@@ -879,7 +2875,26 @@ void f(void) {
   T * b;
 }
     |};
-[%expect {||}]
+[%expect {|
+  ((Declaration
+    (Typedef (specifiers (Nonunique (A Typedef (Eq Int ()))))
+     (declarators ((Plain (Identifier T))))))
+   (Function
+    ((specifiers (Unique (Eq Void ())))
+     (declarator
+      (Function (declarator (Identifier f))
+       (parameters
+        (First
+         ((declarations
+           ((Abstract (specifiers (Unique (Eq Void ()))) (declarator ()))))
+          (ellipsis false))))))
+     (arguments ())
+     (body
+      ((Declaration
+        (Normal (specifiers (Unique (Eq (Name T) ())))
+         (init_declarators
+          ((Plain (Pointer (pointer Value) (inner (Identifier b)))))))))))))
+  |}]
 
 let%expect_test "types" =
   test
@@ -893,7 +2908,51 @@ void test() {
    foo->x = 0;
 }
     |};
-[%expect {||}]
+[%expect {|
+  ((Declaration
+    (Typedef (specifiers (Nonunique (A Typedef (Eq Int ()))))
+     (declarators ((Plain (Identifier X))))))
+   (Declaration
+    (Normal
+     (specifiers
+      (Unique
+       (Eq
+        (Struct_or_union
+         (Defined (kind Struct) (name (Y))
+          (declaration
+           ((Declarations (specifier_qualifiers (Nonunique (Eq Short ())))
+             (declarators ((Declarator (Identifier X)))))))))
+        ())))
+     (init_declarators ())))
+   (Declaration
+    (Typedef
+     (specifiers
+      (Unique
+       (A Typedef
+        (Eq
+         (Struct_or_union
+          (Defined (kind Struct) (name (foo))
+           (declaration
+            ((Declarations (specifier_qualifiers (Nonunique (Eq Int ())))
+              (declarators ((Declarator (Identifier x)))))))))
+         ()))))
+     (declarators ((Plain (Identifier foo))))))
+   (Function
+    ((specifiers (Unique (Eq Void ())))
+     (declarator
+      (Function (declarator (Identifier test)) (parameters (Second ()))))
+     (arguments ())
+     (body
+      ((Declaration
+        (Normal (specifiers (Unique (Eq (Name foo) ())))
+         (init_declarators
+          ((Plain (Pointer (pointer Value) (inner (Identifier foo))))))))
+       (Statement
+        (Expression
+         ((Binary (operator (Assignment Plain))
+           (left (Arrow (receiver (Var foo)) (field x)))
+           (right (Constant (Integer 0))))))))))))
+  |}]
 
 let%expect_test "variable_star" =
   test
@@ -904,6 +2963,23 @@ void f(void) {
   T * b;
 }
     |};
-[%expect {||}]
-
-   *)
+[%expect {|
+  ((Declaration
+    (Normal (specifiers (Nonunique (Eq Int ())))
+     (init_declarators ((Plain (Identifier T)) (Plain (Identifier b))))))
+   (Function
+    ((specifiers (Unique (Eq Void ())))
+     (declarator
+      (Function (declarator (Identifier f))
+       (parameters
+        (First
+         ((declarations
+           ((Abstract (specifiers (Unique (Eq Void ()))) (declarator ()))))
+          (ellipsis false))))))
+     (arguments ())
+     (body
+      ((Statement
+        (Expression
+         ((Binary (operator (Multiplicative Multiply)) (left (Var T))
+           (right (Var b)))))))))))
+  |}]
