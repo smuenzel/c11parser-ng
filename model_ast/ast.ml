@@ -94,41 +94,257 @@ module Make(L : Located) = struct
     let arrow (receiver, field) = Arrow { receiver; field }
     let array_subscript (array, index) = Array_subscript { array; index }
     let function_call (callee, arguments) =
-      let arguments = Option.value ~default:Util.Stored_reversed.empty arguments in
-      let arguments = Util.Stored_reversed.to_list arguments in
+      let arguments = Util.Stored_reversed.opt_to_list arguments in
       Function_call { callee; arguments }
     let comma (a, b) = Comma (a,b)
   end
 
-  module Alignment_specifier = T.Alignment_specifier
-  module Specifier_qualifier_list = T.Specifier_qualifier_list
+  module Qualifier_or_alignment = struct
+    include T.Qualifier_or_alignment
+
+    let make = Util.Either.of_caml
+  end
+
+  module Alignment_specifier = struct
+    include T.Alignment_specifier
+    let alignas_type type_name = Type type_name
+    let alignas_expression expr = Expr expr
+  end
+
+  module Specifier_qualifier_list = struct
+    include T.Specifier_qualifier_list
+
+    let unique l = unique (Util.List_eq1.map_unbounded ~f:Qualifier_or_alignment.make l)
+    let nonunique l = nonunique (Util.List_ge1.map_unbounded ~f:Qualifier_or_alignment.make l)
+  end
+
   module Declaration_specifier = T.Declaration_specifier
-  module Declaration_specifiers = T.Declaration_specifiers
-  module Declaration_specifiers_typedef = T.Declaration_specifiers_typedef
-  module Init_declarator = T.Init_declarator
-  module Pointer = T.Pointer
-  module Declarator = T.Declarator
-  module Abstract_declarator = T.Abstract_declarator
-  module Direct_abstract_declarator = T.Direct_abstract_declarator
-  module Parameter_type_list = T.Parameter_type_list
-  module Parameter_declaration = T.Parameter_declaration
-  module Struct_declarator = T.Struct_declarator
-  module Struct_declaration = T.Struct_declaration
-  module Compound_statement = T.Compound_statement
-  module Expression_statement = T.Expression_statement
-  module Selection_statement = T.Selection_statement
-  module Labeled_statement = T.Labeled_statement
-  module Iteration_statement = T.Iteration_statement
-  module Jump_statement = T.Jump_statement
+
+  module Declaration_specifiers = struct
+    include T.Declaration_specifiers
+
+    let type_unique l = Unique l
+    let type_nonunique l = Nonunique l
+  end
+
+  module Declaration_specifiers_typedef = struct 
+    include T.Declaration_specifiers_typedef
+
+    let type_unique l = Unique l
+    let type_nonunique l = Nonunique l
+  end
+
+  module Init_declarator = struct
+    include T.Init_declarator
+
+    let make a = Plain a
+    let with_initializer (declarator, initializer_) = with_initializer ~declarator ~initializer_
+  end
+
+  module Pointer = struct
+    include T.Pointer
+
+    let rec make = function
+      | None, None -> Value
+      | None, Some t -> Pointer t
+      | Some qual, p ->
+        Qualified { qualifiers = Util.Stored_reversed.to_list qual
+                  ; inner = make (None, p)
+                  }
+  end
+
+  module Declarator = struct
+    include T.Declarator
+
+    let pointer = function
+      | None, t -> t
+      | Some p, t -> Pointer { pointer = p; inner = t }
+
+    let array (declarator, qualifiers, size) =
+      let qualifiers = Util.Stored_reversed.opt_to_list qualifiers in
+      array ~declarator ~qualifiers ~size
+
+    let static_array (declarator, qualifiers, size) = 
+      let qualifiers = Util.Stored_reversed.opt_to_list qualifiers in
+      static_array ~declarator ~qualifiers ~size
+
+    let unspecified_size_variable_array (declarator, qualifiers) =
+      let qualifiers = Util.Stored_reversed.opt_to_list qualifiers in
+      unspecified_size_variable_array ~declarator ~qualifiers
+
+    let function_ (declarator, parameters) =
+      let parameters = Util.Either.of_caml parameters in
+      function_ ~declarator ~parameters
+  end
+
+  module Abstract_declarator = struct
+    include T.Abstract_declarator
+
+    let pointer p = Pointer p
+    let direct (p, d) = Direct { pointer = p; direct = d }
+  end
+
+  module Direct_abstract_declarator = struct
+    include T.Direct_abstract_declarator
+
+    let array (declarator, qualifiers, size) =
+      let qualifiers = Util.Stored_reversed.opt_to_list qualifiers in
+      array ~declarator ~qualifiers ~size
+
+    let static_array (declarator, qualifiers, size) =
+      let qualifiers = Util.Stored_reversed.opt_to_list qualifiers in
+      static_array ~declarator ~qualifiers ~size
+
+    let function_ (declarator, parameters) =
+      let parameters =
+        match parameters with
+        | None -> { T.Parameter_type_list.declarations = []; ellipsis = false }
+        | Some ptl -> ptl
+      in
+      function_  ~declarator ~parameters
+  end
+
+  module Parameter_type_list = struct
+    include T.Parameter_type_list
+
+    let make (declarations, ellipsis) =
+      let declarations = Util.Stored_reversed.to_list declarations in
+      { declarations; ellipsis }
+  end
+
+  module Parameter_declaration = struct
+    include T.Parameter_declaration
+
+    let declarator (specifiers, declarator_) =
+      declarator ~specifiers ~declarator:declarator_
+
+    let abstract (specifiers, declarator) =
+      abstract ~specifiers ~declarator
+  end
+
+  module Struct_declarator = struct
+    include T.Struct_declarator
+
+    let bit_field (declarator, size) =
+      bit_field ~declarator ~size
+
+    let make declarator = Declarator declarator
+  end
+
+  module Struct_declaration = struct
+    include T.Struct_declaration
+
+    let make (specifier_qualifiers, declarator) =
+      Declarations { specifier_qualifiers; declarators = Util.Stored_reversed.opt_to_list declarator }
+  end
+
+  module Compound_statement = struct
+    include T.Compound_statement
+
+    let make l = Util.Stored_reversed.opt_to_list l
+  end
+
+  module Expression_statement = struct 
+    include T.Expression_statement
+
+    let make expr = expr
+  end
+
+  module Selection_statement = struct
+    include T.Selection_statement
+
+    let if_ (condition, then_) = If { condition; then_; else_ = None }
+    let if_else (condition, then_, else_) = If { condition; then_; else_ = Some else_ }
+    let switch (condition, body) = Switch { condition; body }
+  end
+
+  module Labeled_statement = struct
+    include T.Labeled_statement
+
+    let label (name, statement) = label ~name ~statement
+    let case (expression, statement) = case ~expression ~statement
+    let default (statement) = default ~statement
+  end
+
+  module Iteration_statement = struct
+    include T.Iteration_statement
+
+    let while_ (condition, body) = while_ ~condition ~body
+    let do_ (body, condition) = do_ ~body ~condition
+    let for_expr (init, condition, increment, body) = for_expr ~init ~condition ~increment ~body
+    let for_decl (declarator, condition, increment, body) = for_decl ~declarator ~condition ~increment ~body
+  end
+
+  module Jump_statement = struct
+    include T.Jump_statement
+
+    let continue () = continue
+    let break () = break
+  end
+
   module Block_item = T.Block_item
-  module Statement = T.Statement
-  module Declaration = T.Declaration
-  module Type_name = T.Type_name
-  module Static_assert_declaration = T.Static_assert_declaration
-  module C_initializer = T.C_initializer
+
+  module Statement = struct
+    include T.Statement
+
+    let compound a = Compound a
+    let expression a = Expression a
+    let selection a = Selection a
+    let labeled a = Labeled a
+    let iteration a = Iteration a
+    let jump a = Jump a
+  end
+
+  module Declaration = struct
+    include T.Declaration
+
+    let normal (specifiers, init_declarators) =
+      let init_declarators = Option.value ~default:[] init_declarators in
+      normal ~specifiers ~init_declarators
+
+    let typedef (specifiers, declarators) =
+      let declarators = Option.value ~default:[] declarators in
+      typedef ~specifiers ~declarators
+  end
+
+  module Type_name = struct
+    include T.Type_name
+
+    let make (specifier_qualifiers, abstract_declarator) =
+      { specifier_qualifiers; abstract_declarator }
+  end
+
+  module Static_assert_declaration = struct
+    include T.Static_assert_declaration
+
+    let make (condition, message) = { condition; message }
+  end
+
+  module C_initializer = struct
+    include T.C_initializer
+
+    let expression e = Expression e
+    let initializer_list l = 
+      let l = Util.Stored_reversed.to_list l in
+      let l = Core.List.map ~f:(Core.Tuple2.map_fst ~f:Util.Stored_reversed.opt_to_list) l in
+      Initializer_list l
+  end
+
   module Designator = T.Designator
-  module Function_definition = T.Function_definition
-  module External_declaration = T.External_declaration
+
+  module Function_definition = struct
+    include T.Function_definition
+
+    let make (specifiers, declarator, arguments, body) =
+      let arguments = Util.Stored_reversed.opt_to_list arguments in
+      { specifiers; declarator; arguments; body }
+  end
+
+  module External_declaration = struct
+    include T.External_declaration
+
+    let function_definition f = Function f
+  end
 end
 
 open struct

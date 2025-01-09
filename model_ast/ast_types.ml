@@ -348,7 +348,7 @@ module Make(L : Located) = struct
   end = Alignment_specifier
 
   and Qualifier_or_alignment : sig
-    type t = (Type_qualifier.t, Alignment_specifier.t) Either.t
+    type t = (Type_qualifier.t, Alignment_specifier.t) Base.Either.t
         [@@deriving sexp, compare, hash]
   end = Qualifier_or_alignment
 
@@ -473,11 +473,11 @@ module Make(L : Located) = struct
   and Parameter_declaration : sig
     type t =
       | Declarator of 
-          { specifier : Declaration_specifier.t
+          { specifiers : Declaration_specifiers.t
           ; declarator : Declarator.t
           }
       | Abstract of 
-          { specifier : Declaration_specifier.t
+          { specifiers : Declaration_specifiers.t
           ; declarator : Abstract_declarator.t option
           }
       [@@deriving sexp, compare, hash, variants]
@@ -540,7 +540,7 @@ module Make(L : Located) = struct
       | Default of
           { statement : Statement.t located
           }
-    [@@deriving sexp, compare, hash]
+    [@@deriving sexp, compare, hash, variants]
   end = Labeled_statement
 
   and Iteration_statement : sig
@@ -602,9 +602,10 @@ module Make(L : Located) = struct
           ; init_declarators : Declarator.t Init_declarator.t list
           }
       | Typedef of
-          { specifier : Declaration_specifiers_typedef.t
-          ; declarator : Declarator.t Init_declarator.t list
+          { specifiers : Declaration_specifiers_typedef.t
+          ; declarators : Declarator.t Init_declarator.t list
           }
+      | Static_assert of Static_assert_declaration.t
     [@@deriving sexp, compare, hash, variants]
   end = Declaration
 
