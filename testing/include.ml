@@ -9,14 +9,7 @@ let test s =
   let context = C11parser.Context.create_packed () in
   let module P = P(val context) in
   let lexbuf = Sedlexing.Utf8.from_string s in
-  P.translation_unit_file lexbuf
-  |> [%sexp_of: Ast.External_declaration.t list]
+  let edl = P.translation_unit_file lexbuf in
+  [%message.omit_nil ""
+    ~_: (edl : Ast.External_declaration.t list)]
   |> print_s
-
-let%expect_test "" =
- test 
-   {|
-struct {
-  _Alignas(int) char x;
-} s;
-   |}

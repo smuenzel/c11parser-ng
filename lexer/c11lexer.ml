@@ -31,6 +31,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 module Token = Token
 module Literal = Literal
 
+exception Lexer_error of string * int * int * int * int
+
 (* Identifiers *)
 let digit = [%sedlex.regexp? '0' .. '9']
 let hexadecimal_digit = [%sedlex.regexp? digit | 'A' .. 'F' | 'a' .. 'f']
@@ -216,7 +218,7 @@ let rec initial lexbuf : Token.t =
   | "?"                           ->  QUESTION 
   | ":"                           ->  COLON 
   | "~"                           ->  TILDE 
-  | "-> "|"<%"                    ->  LBRACE 
+  | "{"|"<%"                    ->  LBRACE 
   | "}"|"%>"                      ->  RBRACE 
   | "["|"<:"                      ->  LBRACK 
   | "]"|":>"                      ->  RBRACK 
@@ -271,7 +273,10 @@ let rec initial lexbuf : Token.t =
   | "while"                       ->  WHILE 
   | identifier                    ->  NAME (c lexbuf)
   | eof                           ->  EOF 
-  | _                             ->  failwith "Lexer error" 
+  | _                             ->  
+    let pos_start, pos_end = Sedlexing.lexing_positions lexbuf in
+    raise (Lexer_error
+             ("Initial", pos_start.pos_lnum, pos_start.pos_cnum, pos_end.pos_lnum, pos_end.pos_cnum))
   
 and initial_linebegin lexbuf =
   match%sedlex lexbuf with
@@ -424,3 +429,12 @@ let lexer (state : State.t) (lexbuf : Sedlexing.lexbuf) : Token.t =
     | _, _ ->
       state.kind <- Regular;
       token
+
+(*
+let lexer state lexbuf =
+  let token = lexer state lexbuf in
+  Token.sexp_of_t token
+  |> Sexplib0.Sexp.to_string
+  |> print_endline;
+  token
+   *)
