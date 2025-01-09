@@ -10,6 +10,12 @@ module Var_name = String_id.Make(struct let module_name = "Var_name" end)()
 module Typedef_name = String_id.Make(struct let module_name = "Typedef_name" end)()
 module General_identifier = String_id.Make(struct let module_name = "General_identifier" end)()
 
+module Typedef = struct
+  type t =
+    | Typedef
+  [@@deriving sexp, bin_io, compare, hash, variants]
+end
+
 module Type_qualifier = struct
   type t =
     | Const
@@ -205,6 +211,7 @@ module Make(L : Located) = struct
   module Typedef_name = Typedef_name
   module General_identifier = General_identifier
 
+  module Typedef = Typedef
   module Type_qualifier = Type_qualifier
   module Storage_class_specifier = Storage_class_specifier
   module Function_specifier = Function_specifier
@@ -235,7 +242,7 @@ module Make(L : Located) = struct
           { name : General_identifier.t option
           ; values : Enum_constant.t list
           }
-      [@@deriving sexp, bin_io, compare, hash]
+      [@@deriving sexp, bin_io, compare, hash, variants]
   end = Enum
 
   and Type_specifier_unique : sig
@@ -246,7 +253,7 @@ module Make(L : Located) = struct
       | Enum of Enum.t
       | Struct_or_union of Struct_or_union_specifier.t
       | Name of Typedef_name.t
-    [@@deriving sexp, bin_io, compare, hash]
+    [@@deriving sexp, bin_io, compare, hash, variants]
   end = Type_specifier_unique
 
   and Struct_or_union_specifier : sig
@@ -256,18 +263,379 @@ module Make(L : Located) = struct
                    ; name : General_identifier.t option
                    ; declaration : Struct_declaration.t list
                    }
-    [@@deriving sexp, bin_io, compare, hash]
+    [@@deriving sexp, bin_io, compare, hash, variants]
   end = Struct_or_union_specifier
 
-  and Expr : sig
-    type t
+  and Generic_association : sig
+    type t =
+      | Default of Expr.t located
+      | Named of { name : Type_name.t; value : Expr.t located }
+    [@@deriving sexp, bin_io, compare, hash, variants]
+  end = Generic_association
 
+  and Generic_selection : sig
+    type t =
+      { discriminant : Expr.t located
+      ; associations : Generic_association.t list
+      } [@@deriving sexp, bin_io, compare, hash]
+  end = Generic_selection
+
+  and Expr : sig
+    module Binary_operator : sig
+      type t =
+        | Equality of Equality_operator.t
+        | Relational of Relational_operator.t
+        | Shift of Shift_operator.t
+        | Additive of Additive_operator.t
+        | Multiplicative of Multiplicative_operator.t
+        | Logical of Logical_operator.t
+        | Bitwise of Bitwise_operator.t
+        | Assignment of Assignment_operator.t
+        [@@deriving sexp, bin_io, compare, hash, variants]
+    end
+    type t =
+      | Binary of
+          { operator : Binary_operator.t
+          ; left : t located
+          ; right : t located
+          }
+      | Unary of 
+          { operator : Unary_operator.t
+          ; operand : t located
+          }
+      | Question of 
+          { condition : t located
+          ; if_true : t located
+          ; if_false : t located
+          }
+      | Cast of
+          { type_name : Type_name.t
+          ; operand : t located
+          }
+      | Sizeof of Type_name.t
+      | Alignof of Type_name.t
+      | Dot of 
+          { receiver : t located
+          ; field : General_identifier.t
+          }
+      | Arrow of 
+          { receiver : t located
+          ; field : General_identifier.t
+          }
+      | Var of Var_name.t
+      | Constant of Constant.t
+
+      | Array_subscript of 
+          { array : t located
+          ; index : t located
+          }
+      | Function_call of
+          { callee : t located
+          ; arguments : t located list
+          }
+
+      | Generic of Generic_selection.t
+
+      | Comma of t located * t located
+    [@@deriving sexp, bin_io, compare, hash, variants]
   end = Expr
 
-  and Type_name : sig
-    type t
+  and Alignment_specifier : sig
+    type t =
+      | Type of Type_name.t
+      | Expr of Expr.t located
+    [@@deriving sexp, bin_io, compare, hash, variants]
+  end = Alignment_specifier
 
+  and Qualifier_or_alignment : sig
+    type t = (Type_qualifier.t, Alignment_specifier.t) Either.t
+        [@@deriving sexp, bin_io, compare, hash]
+  end = Qualifier_or_alignment
+
+  and Specifier_qualifier_list : sig
+    type t =
+      | Unique of (Type_specifier_unique.t, Qualifier_or_alignment.t) Util.List_eq1.t
+      | Nonunique of (Type_specifier_nonunique.t, Qualifier_or_alignment.t) Util.List_ge1.t
+    [@@deriving sexp, bin_io, compare, hash, variants]
+  end = Specifier_qualifier_list
+
+  and Declaration_specifier : sig
+    type t =
+      | Storage_class_specifier of Storage_class_specifier.t
+      | Type_qualifier of Type_qualifier.t
+      | Function_specifier of Function_specifier.t
+      | Alignment_specifier of Alignment_specifier.t
+    [@@deriving sexp, bin_io, compare, hash, variants]
+  end = Declaration_specifier
+
+  and Declaration_specifiers : sig
+    type t =
+      | Unique of (Type_specifier_unique.t, Declaration_specifier.t) Util.List_eq1.t
+      | Nonunique of (Type_specifier_nonunique.t, Declaration_specifier.t) Util.List_ge1.t
+    [@@deriving sexp, bin_io, compare, hash, variants]
+  end = Declaration_specifiers
+
+  and Declaration_specifiers_typedef : sig
+    type t =
+      | Unique of (Typedef.t, Type_specifier_unique.t, Declaration_specifier.t) Util.List_eq1_eq1.t
+      | Nonunique of (Typedef.t, Type_specifier_nonunique.t, Declaration_specifier.t) Util.List_eq1_ge1.t
+    [@@deriving sexp, bin_io, compare, hash, variants]
+  end = Declaration_specifiers_typedef
+
+  and Init_declarator : sig
+    type 'a t =
+      | Plain of 'a
+      | With_initializer of
+          { declarator : 'a
+          ; initializer_ : C_initializer.t
+          } 
+    [@@deriving sexp, bin_io, compare, hash, variants]
+  end = Init_declarator
+
+  and Pointer : sig
+    type t = 
+      | Value
+      | Qualified of 
+          { qualifiers : Type_qualifier.t list
+          ; inner : t
+          }
+      | Pointer of t
+      [@@deriving sexp, bin_io, compare, hash, variants]
+  end = Pointer
+
+  and Declarator : sig
+    type t =
+      | Identifier of General_identifier.t
+      | Pointer of 
+          { pointer : Pointer.t
+          ; inner : t
+          }
+      | Array of 
+          { declarator : t
+          ; qualifiers : Type_qualifier.t list
+          ; size : Expr.t located option
+          }
+      | Static_array of 
+          { declarator : t
+          ; qualifiers : Type_qualifier.t list
+          ; size : Expr.t located
+          }
+      | Unspecified_size_variable_array of
+          { declarator : t
+          ; qualifiers : Type_qualifier.t list
+          }
+      | Function of
+          { declarator : t
+          ; parameters :
+              (Parameter_type_list.t, Var_name.t list option) Either.t
+          }
+    [@@deriving sexp, bin_io, compare, hash, variants]
+  end = Declarator
+
+  and Abstract_declarator : sig
+    type t =
+      | Pointer of Pointer.t
+      | Direct of 
+          { pointer : Pointer.t option
+          ; direct : Direct_abstract_declarator.t
+          }
+    [@@deriving sexp, bin_io, compare, hash, variants]
+
+  end = Abstract_declarator
+
+  and Direct_abstract_declarator : sig
+    type t =
+      | Abstract of Abstract_declarator.t
+      | Array of 
+          { declarator : t option
+          ; qualifiers : Type_qualifier.t list
+          ; size : Expr.t located option
+          }
+      | Static_array of
+          { declarator : t option
+          ; qualifiers : Type_qualifier.t list
+          ; size : Expr.t located
+          }
+      | Unspecified_size_variable_array of t option
+      | Function of
+          { declarator : t option
+          ; parameters : Parameter_type_list.t
+          }
+    [@@deriving sexp, bin_io, compare, hash, variants]
+  end = Direct_abstract_declarator
+
+  and Parameter_type_list : sig
+    type t =
+      { declarations : Parameter_declaration.t list
+      ; ellipsis : bool
+      } [@@deriving sexp, bin_io, compare, hash]
+  end = Parameter_type_list
+
+  and Parameter_declaration : sig
+    type t =
+      | Declarator of 
+          { specifier : Declaration_specifier.t
+          ; declarator : Declarator.t
+          }
+      | Abstract of 
+          { specifier : Declaration_specifier.t
+          ; declarator : Abstract_declarator.t option
+          }
+      [@@deriving sexp, bin_io, compare, hash, variants]
+  end = Parameter_declaration
+
+  and Struct_declarator : sig
+    type t =
+      | Declarator of Declarator.t
+      | Bit_field of
+          { declarator : Declarator.t option
+          ; size : Expr.t located
+          }
+    [@@deriving sexp, bin_io, compare, hash, variants]
+  end = Struct_declarator
+
+  and Struct_declaration : sig
+    type t =
+      | Declarations of
+          { specifier_qualifiers : Specifier_qualifier_list.t
+          ; declarators : Struct_declarator.t list
+          }
+      | Static_assert of unit
+    [@@deriving sexp, bin_io, compare, hash, variants]
+  end = Struct_declaration
+
+  and Compound_statement : sig
+    type t = Block_item.t list
+    [@@deriving sexp, bin_io, compare, hash]
+  end = Compound_statement
+
+  and Expression_statement : sig
+    type t = Expr.t located option
+    [@@deriving sexp, bin_io, compare, hash]
+  end = Expression_statement
+
+  and Selection_statement : sig
+    type t = 
+      | If of
+          { condition : Expr.t located
+          ; then_ : Statement.t located
+          ; else_ : Statement.t located option
+          }
+      | Switch of
+          { condition : Expr.t located
+          ; body : Statement.t located
+          }
+    [@@deriving sexp, bin_io, compare, hash, variants]
+  end = Selection_statement
+
+  and Labeled_statement : sig
+    type t =
+      | Label of
+          { name : General_identifier.t
+          ; statement : Statement.t located
+          }
+      | Case of 
+          { expression : Expr.t located
+          ; statement : Statement.t located
+          }
+      | Default of
+          { statement : Statement.t located
+          }
+    [@@deriving sexp, bin_io, compare, hash, variants]
+  end = Labeled_statement
+
+  and Iteration_statement : sig
+    type t =
+      | While of 
+          { condition : Expr.t located
+          ; body : Statement.t located
+          }
+      | Do of
+          { condition : Expr.t located
+          ; body : Statement.t located
+          }
+      | For_expr of
+          { init : Expr.t located option
+          ; condition : Expr.t located option
+          ; increment : Expr.t located option
+          ; body : Statement.t located
+          }
+      | For_decl of
+          { declarator : Declaration.t located
+          ; condition : Expr.t located option
+          ; increment : Expr.t located option
+          ; body : Statement.t located
+          }
+    [@@deriving sexp, bin_io, compare, hash, variants]
+  end = Iteration_statement
+
+  and Jump_statement : sig
+    type t =
+      | Break
+      | Continue
+      | Return of Expr.t located option
+      | Goto of General_identifier.t
+    [@@deriving sexp, bin_io, compare, hash, variants]
+  end = Jump_statement
+
+  and Block_item : sig
+    type t =
+      | Declaration of Declaration.t located
+      | Statement of Statement.t located
+    [@@deriving sexp, bin_io, compare, hash, variants]
+  end = Block_item
+
+  and Statement : sig
+    type t =
+      | Compound of Compound_statement.t
+      | Expression of Expression_statement.t
+      | Selection of Selection_statement.t
+      | Labeled of Labeled_statement.t
+      | Iteration of Iteration_statement.t
+      | Jump of Jump_statement.t
+    [@@deriving sexp, bin_io, compare, hash, variants]
+  end = Statement
+
+  and Declaration : sig
+    type t =
+      | Normal of
+          { specifiers : Declaration_specifiers.t
+          ; init_declarators : Declarator.t Init_declarator.t list
+          }
+      | Typedef of
+          { specifier : Declaration_specifiers_typedef.t
+          ; declarator : Declarator.t Init_declarator.t list
+          }
+    [@@deriving sexp, bin_io, compare, hash, variants]
+  end = Declaration
+
+  and Type_name : sig
+    type t =
+      { specifier_qualifiers : Specifier_qualifier_list.t
+      ; abstract_declarator : Abstract_declarator.t option
+      } [@@deriving sexp, bin_io, compare, hash]
   end = Type_name
+      
+  and Static_assert_declaration : sig
+    type t =
+      { condition : Expr.t located
+      ; message : Literal.String.t
+      } [@@deriving sexp, bin_io, compare, hash]
+  end = Static_assert_declaration
+
+  and C_initializer : sig
+    type t =
+      | Expression of Expr.t located
+      | Initializer_list of (Designator.t list * C_initializer.t) list
+    [@@deriving sexp, bin_io, compare, hash, variants]
+  end = C_initializer
+
+  and Designator : sig
+    type t =
+      | Field of General_identifier.t
+      | Subscript of Expr.t located
+    [@@deriving sexp, bin_io, compare, hash, variants]
+  end = Designator
 
 end
 

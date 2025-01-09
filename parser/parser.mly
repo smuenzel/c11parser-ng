@@ -828,7 +828,7 @@ let block_item_list :=
     < Util.Stored_reversed.snoc_opt >
 
 let block_item :=
-| ~=declaration;
+| ~=located(declaration);
 < Gen.Block_item.declaration >
 | ~=located(statement);
 < Gen.Block_item.statement >

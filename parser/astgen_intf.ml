@@ -28,6 +28,11 @@ module type S = sig
     val of_string : string -> t
   end
 
+  module Typedef : sig
+    type t
+
+    val typedef : t
+  end
 
   module Type_qualifier : sig
     type t
@@ -266,12 +271,6 @@ module type S = sig
     val type_nonunique : (Typedef.t, Type_specifier_nonunique.t, Declaration_specifier.t) Util.List_eq1_ge1.t -> t
   end
 
-  and Typedef : sig
-    type t
-
-    val typedef : t
-  end
-
   and Init_declarator : sig
     type 'a t
 
@@ -392,7 +391,7 @@ module type S = sig
   and Block_item : sig
     type t
     val statement : Statement.t located -> t
-    val declaration : Declaration.t -> t
+    val declaration : Declaration.t located -> t
   end
 
   and Statement : sig
