@@ -34,6 +34,9 @@ type t =
   { typedefnames : StringSet.t
   }
 
+let create () =
+  { typedefnames = StringSet.empty }
+
 (* This declares [id] as a typedef name. *)
 let declare_typedefname t id =
   { typedefnames = StringSet.add id t.typedefnames }
@@ -57,9 +60,13 @@ module type Packed = sig
   val restore_context : snapshot -> unit
 end
 
-let create_packed () : (module Packed) =
+let create_packed ?init () : (module Packed) =
   (module struct
-    let t = ref { typedefnames = StringSet.empty }
+    let t =
+      ref (
+        match init with
+        | Some init -> init
+        | None -> create ())
     let declare_typedefname id = t := declare_typedefname !t id
     let declare_varname id = t := declare_varname !t id
     let is_typedefname id = is_typedefname !t id

@@ -28,8 +28,6 @@ ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 *)
 
-open Context
-
 (* We distinguish between three kinds of declarators: 1- identifiers,
    2- function declarators, and 3- everything else. In the case of a
    function declarator, we save a snapshot of the context at the END
@@ -39,20 +37,22 @@ open Context
    identifier that is being declared; 2- the declarator's kind, as
    defined above. *)
 
-type declarator
+type 'context t
 
 (* This accessor returns the identifier that is being declared. *)
 
-val identifier: declarator -> string
+val identifier: 'context t -> string
 
 (* Three functions for constructing declarators. *)
 
-val identifier_declarator: string -> declarator
-val function_declarator: declarator -> context -> declarator
-val other_declarator: declarator -> declarator
+val identifier_declarator: string -> 'context t
+val function_declarator: 'context t -> 'context -> 'context t
+val other_declarator: 'context t -> 'context t
 
 (* A function for restoring the context that was saved in a function
    declarator and, on top of that, declaring the function itself as a
    variable. *)
 
-val reinstall_function_context: declarator -> unit
+val reinstall_function_context 
+  : (module Context.Packed with type snapshot = 'snapshot)
+  -> 'snapshot t -> unit
