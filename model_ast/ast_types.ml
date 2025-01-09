@@ -6,6 +6,11 @@ module type Located = sig
   val locate : start:Lexing.position -> end_:Lexing.position -> 'a -> 'a t
 end
 
+module Dummy_located = struct
+  type 'a t = 'a [@@deriving sexp, compare, hash]
+  let locate ~start:_ ~end_:_ x = x
+end
+
 module Var_name = String_id.Make(struct let module_name = "Var_name" end)()
 module Typedef_name = String_id.Make(struct let module_name = "Typedef_name" end)()
 module General_identifier = String_id.Make(struct let module_name = "General_identifier" end)()

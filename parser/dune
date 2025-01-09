@@ -7,6 +7,6 @@
   )
 
 (menhir
-   (modules parser)
+   (modules parser_raw)
    (flags (--external-tokens C11lexer.Token))
    )
