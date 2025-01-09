@@ -16,7 +16,7 @@ module Make
   let syntax_error_printer = function
     | Syntax_error (line, col, token, msg, state) ->
       Some (Printf.sprintf
-              "Syntax error at line %d, column %d: '%s' (token: %s, state: %d)"
+              "Syntax error at line %d, column %d: '%s' (last token: %s, state: %d)"
               line
               col
               (String.trim msg)
@@ -53,6 +53,12 @@ module Make
       let msg = Error_messages.message e in
       let p = Sedlexing.lexing_position_curr lexbuf in
       raise (Syntax_error (p.pos_lnum, p.pos_cnum - p.pos_bol, !last_token, msg, e))
+    | C11lexer.Lexer_error (_, l0, c0, _, _) as error ->
+      let msg =
+        Printf.sprintf
+          "Lexer error: %s" (Option.value ~default:"" (C11lexer.print_lexer_error error))
+      in
+      raise (Syntax_error (l0, c0, !last_token, msg, 0))
 
 
   let translation_unit_file =

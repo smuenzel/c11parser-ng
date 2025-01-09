@@ -33,6 +33,23 @@ module Literal = Literal
 
 exception Lexer_error of string * int * int * int * int
 
+let print_lexer_error = function
+  | Lexer_error (s, l1, c1, l2, c2) ->
+    Some (Printf.sprintf "%s: %d:%d-%d:%d\n" s l1 c1 l2 c2)
+  | _ -> None
+
+let () =
+  Printexc.register_printer print_lexer_error
+
+let raise_lexer_error lexbuf state =
+  let pos_start, pos_end = Sedlexing.lexing_positions lexbuf in
+  raise (Lexer_error
+           ( state
+           , pos_start.pos_lnum
+           , pos_start.pos_cnum - pos_start.pos_bol
+           , pos_end.pos_lnum
+           , pos_end.pos_cnum - pos_end.pos_bol))
+
 (* Identifiers *)
 let digit = [%sedlex.regexp? '0' .. '9']
 let hexadecimal_digit = [%sedlex.regexp? digit | 'A' .. 'F' | 'a' .. 'f']
@@ -154,13 +171,16 @@ let literal_char_prefix lexbuf =
   | _ -> failwith "invalid literal character prefix"
 
 let literal_string_prefix lexbuf =
-  match Sedlexing.Utf8.sub_lexeme lexbuf 0 2 with
-  | "L\"" -> `Wide
-  | "u\"" -> `U16
-  | "U\"" -> `U32
-  | "u8" -> `Utf8
-  | "\"" -> `Plain
-  | _ -> failwith "invalid literal string prefix"
+  match Sedlexing.Latin1.lexeme_char lexbuf 0 with
+  | '"' -> `Plain
+  | _ ->
+    match Sedlexing.Utf8.sub_lexeme lexbuf 0 2 with
+    | "L\"" -> `Wide
+    | "u\"" -> `U16
+    | "U\"" -> `U32
+    | "u8" -> `Utf8
+    | "\"" -> `Plain
+    | _ -> raise_lexer_error lexbuf "invalid literal string prefix"
 
 let rec initial lexbuf : Token.t =
   match%sedlex lexbuf with
@@ -274,9 +294,7 @@ let rec initial lexbuf : Token.t =
   | identifier                    ->  NAME (c lexbuf)
   | eof                           ->  EOF 
   | _                             ->  
-    let pos_start, pos_end = Sedlexing.lexing_positions lexbuf in
-    raise (Lexer_error
-             ("Initial", pos_start.pos_lnum, pos_start.pos_cnum, pos_end.pos_lnum, pos_end.pos_cnum))
+    raise_lexer_error lexbuf "Initial"
   
 and initial_linebegin lexbuf =
   match%sedlex lexbuf with
@@ -284,7 +302,8 @@ and initial_linebegin lexbuf =
   | whitespace_char_no_newline    ->  initial_linebegin lexbuf 
   | '#' | "%:"                    ->  hash lexbuf 
   | ""                            ->  initial lexbuf 
-  | _                             ->  failwith "Lexer error" 
+  | _                             ->  
+    raise_lexer_error lexbuf "Initial_linebegin"
 
 and char lexbuf : Literal.Char.Element.t =
   match%sedlex lexbuf with
@@ -299,7 +318,8 @@ and char lexbuf : Literal.Char.Element.t =
   | '\\'                          -> failwith "incorrect escape sequence" 
   | Compl (Chars "")              ->
     Literal.Char.Element.Plain (Sedlexing.lexeme_char lexbuf 0)
-  | _                             ->  failwith "Lexer error" 
+  | _                             -> 
+    raise_lexer_error lexbuf "Char"
 
 and [@ocaml.tail_mod_cons] char_literal_end lexbuf =
   match%sedlex lexbuf with
@@ -308,7 +328,8 @@ and [@ocaml.tail_mod_cons] char_literal_end lexbuf =
   | ""         ->
     let c = char lexbuf in
     c :: char_literal_end lexbuf 
-  | _          ->  failwith "Lexer error" 
+  | _          ->  
+    (raise_lexer_error [@tailcall false]) lexbuf "Char_literal_end"
 
 and [@ocaml.tail_mod_cons] string_literal lexbuf : Literal.Char.Element.t list =
   match%sedlex lexbuf with
@@ -317,7 +338,8 @@ and [@ocaml.tail_mod_cons] string_literal lexbuf : Literal.Char.Element.t list =
   | ""         ->
     let c = char lexbuf in 
     c :: string_literal lexbuf 
-  | _          ->  failwith "Lexer error" 
+  | _          ->  
+    (raise_lexer_error [@tailcall false]) lexbuf "String_literal"
 
 (* We assume gcc -E syntax but try to tolerate variations. *)
 and hash lexbuf =
@@ -331,7 +353,8 @@ and hash lexbuf =
   | Compl '\n', eof
       ->  failwith "unexpected end of file" 
   | _
-      ->  failwith "Lexer error" 
+    ->
+    raise_lexer_error lexbuf "Hash"
 
 (* Multi-line comment terminated by "*/" *)
 and multiline_comment lexbuf =
@@ -340,7 +363,8 @@ and multiline_comment lexbuf =
   | eof    ->  failwith "unterminated comment" 
   | '\n'   ->  new_line lexbuf; multiline_comment lexbuf 
   | Compl (Chars "") -> multiline_comment lexbuf 
-  | _      ->  failwith "Lexer error"
+  | _      ->
+    raise_lexer_error lexbuf "Multiline_comment"
 
 (* Single-line comment terminated by a newline *)
 and singleline_comment lexbuf =
@@ -349,7 +373,8 @@ and singleline_comment lexbuf =
   | eof    ->  () 
   | Compl (Chars "") ->  singleline_comment lexbuf 
   | _
-      ->  failwith "Lexer error" 
+    ->
+    raise_lexer_error lexbuf "Singleline_comment"
 
 
 (* This lexer chooses between [inital] or [initial_linebegin],

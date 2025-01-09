@@ -1060,6 +1060,7 @@ void f(void) {
   |}]
 
 let%expect_test "dangling_else_misleading.fail" =
+  Printexc.record_backtrace false;
   test
     {|
 // dangling_else_misleading.fail.c
@@ -1074,16 +1075,7 @@ void f(void) {
 }
     |};
 [%expect.unreachable]
-[@@expect.uncaught_exn {|
-  (* CR expect_test_collector: This test expectation appears to contain a backtrace.
-     This is strongly discouraged as backtraces are fragile.
-     Please change this test to not include a backtrace. *)
-  ("Syntax error at line 9, column 11: 'A typedef name is used in an incorrect context.' (token: (VARIABLE T), state: 425)")
-  Raised at C11parser__Parser.Make.wrap.(fun) in file "parser/parser.ml", line 55, characters 6-84
-  Called from Testing__Include.test in file "testing/include.ml", line 12, characters 12-42
-  Called from Testing__Previous_tests.(fun) in file "testing/previous_tests.ml", lines 1063-1075, characters 2-6
-  Called from Ppx_expect_runtime__Test_block.Configured.dump_backtrace in file "runtime/test_block.ml", line 142, characters 10-28
-  |}]
+[@@expect.uncaught_exn {| ("Syntax error at line 9, column 11: 'A typedef name is used in an incorrect context.' (last token: (VARIABLE T), state: 425)") |}]
 
 
 let%expect_test "declaration_ambiguity" =
@@ -1674,7 +1666,7 @@ let%expect_test "enum-trick" =
   test
     {|
 // enum-trick.c
-#include <stdio.h>
+int printf(const char* restrict, ...);
 enum { a = 42 } x = a;
 int main(int argc, char *argv[]) {
   enum { a = a + 1 } y = a;
@@ -1683,20 +1675,77 @@ int main(int argc, char *argv[]) {
 // Each enumeration constant has scope that begins just after the
 // appearance of its defining enumerator in an enumerator list.
     |};
-[%expect.unreachable]
-[@@expect.uncaught_exn {|
-  (* CR expect_test_collector: This test expectation appears to contain a backtrace.
-     This is strongly discouraged as backtraces are fragile.
-     Please change this test to not include a backtrace. *)
-  (Failure "Lexer error")
-  Raised at Stdlib.failwith in file "stdlib.ml", line 29, characters 17-33
-  Called from C11lexer.lexer in file "lexer/c11lexer.ml", line 418, characters 16-28
-  Called from C11parser__Parser.Make.wrap.(fun).lexer in file "parser/parser.ml", line 41, characters 18-45
-  Called from C11parser__Parser_raw.Make._menhir_run_383 in file "parser/parser_raw.ml", line 16026, characters 19-47
-  Called from C11parser__Parser.Make.wrap.(fun) in file "parser/parser.ml", line 50, characters 6-24
-  Called from Testing__Include.test in file "testing/include.ml", line 12, characters 12-42
-  Called from Testing__Previous_tests.(fun) in file "testing/previous_tests.ml", lines 1674-1685, characters 2-6
-  Called from Ppx_expect_runtime__Test_block.Configured.dump_backtrace in file "runtime/test_block.ml", line 142, characters 10-28
+[%expect {|
+  ((Declaration
+    (Normal (specifiers (Nonunique (Eq Int ())))
+     (init_declarators
+      ((Plain
+        (Function (declarator (Identifier printf))
+         (parameters
+          (First
+           ((declarations
+             ((Abstract
+               (specifiers (Nonunique (B (Type_qualifier Const) (Eq Char ()))))
+               (declarator
+                ((Pointer (Qualified (qualifiers (Restrict)) (inner Value))))))))
+            (ellipsis true))))))))))
+   (Declaration
+    (Normal
+     (specifiers
+      (Unique
+       (Eq
+        (Enum
+         (Defined (name ())
+          (values (((name a) (value ((Constant (Integer 42)))))))))
+        ())))
+     (init_declarators
+      ((With_initializer (declarator (Identifier x))
+        (initializer_ (Expression (Var a))))))))
+   (Function
+    ((returns (Nonunique (Eq Int ())))
+     (declarator
+      (Function (declarator (Identifier main))
+       (parameters
+        (First
+         ((declarations
+           ((Declarator (specifiers (Nonunique (Eq Int ())))
+             (declarator (Identifier argc)))
+            (Declarator (specifiers (Nonunique (Eq Char ())))
+             (declarator
+              (Pointer (pointer Value)
+               (inner
+                (Array (declarator (Identifier argv)) (qualifiers ())
+                 (size ()))))))))
+          (ellipsis false))))))
+     (arguments ())
+     (body
+      ((Declaration
+        (Normal
+         (specifiers
+          (Unique
+           (Eq
+            (Enum
+             (Defined (name ())
+              (values
+               (((name a)
+                 (value
+                  ((Binary (operator (Additive Plus)) (left (Var a))
+                    (right (Constant (Integer 1)))))))))))
+            ())))
+         (init_declarators
+          ((With_initializer (declarator (Identifier y))
+            (initializer_ (Expression (Var a))))))))
+       (Statement
+        (Expression
+         ((Function_call (callee (Var printf))
+           (arguments
+            ((Constant
+              (String
+               (((kind Plain)
+                 (value
+                  ((Plain U+0025) (Plain U+0064) (Plain U+002C) (Plain U+0020)
+                   (Plain U+0025) (Plain U+0064) (Escape n)))))))
+             (Var x) (Var y))))))))))))
   |}]
 
 let%expect_test "expressions" =
