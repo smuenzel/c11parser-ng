@@ -236,7 +236,9 @@ module Make(L : Located) = struct
     include T.Struct_declaration
 
     let make (specifier_qualifiers, declarator) =
-      Declarations { specifier_qualifiers; declarators = Util.Stored_reversed.opt_to_list declarator }
+      Declarations { specifier_qualifiers
+                   ; declarators = Util.Stored_reversed.opt_to_list declarator
+                   }
   end
 
   module Compound_statement = struct
@@ -272,8 +274,10 @@ module Make(L : Located) = struct
 
     let while_ (condition, body) = while_ ~condition ~body
     let do_ (body, condition) = do_ ~body ~condition
-    let for_expr (init, condition, increment, body) = for_expr ~init ~condition ~increment ~body
-    let for_decl (declarator, condition, increment, body) = for_decl ~declarator ~condition ~increment ~body
+    let for_expr (init, condition, increment, body) =
+      for_expr ~init ~condition ~increment ~body
+    let for_decl (declarator, condition, increment, body) =
+      for_decl ~declarator ~condition ~increment ~body
   end
 
   module Jump_statement = struct
