@@ -4,6 +4,7 @@ type 'a with_pos = start:Lexing.position -> end_:Lexing.position -> 'a
 module Literal = C11lexer.Literal
 
 module type S = sig
+  type 'a rev := 'a list Util.Stored_reversed.t
 
   type 'a located
 
@@ -74,14 +75,14 @@ module type S = sig
     type t
 
     val named : General_identifier.t -> t
-    val defined : General_identifier.t option * Enum_constant.t list Util.Stored_reversed.t -> t
+    val defined : General_identifier.t option * Enum_constant.t rev -> t
   end
 
   and Type_specifier_unique : sig
     type t
     val void : t
     val bool : t
-    val atomic : unit -> t
+    val atomic : Type_name.t -> t
     val enum : Enum.t -> t
     val struct_or_union : Struct_or_union_specifier.t -> t
     val name : Typedef_name.t -> t
@@ -204,16 +205,16 @@ module type S = sig
     val assignment : Assignment_operator.t binary
     val unary : Unary_operator.t unary
     val question : (t' * t' * t') -> t
-    val cast : (unit * t') -> t
-    val sizeof : unit -> t
-    val alignof : unit -> t
+    val cast : (Type_name.t * t') -> t
+    val sizeof : Type_name.t -> t
+    val alignof : Type_name.t -> t
     val dot : (t' * General_identifier.t) -> t
     val arrow : (t' * General_identifier.t) -> t
     val var : Var_name.t -> t
     val constant : Constant.t -> t
 
     val array_subscript : (t' * t') -> t
-    val function_call : (t' * t' list Util.Stored_reversed.t option) -> t
+    val function_call : (t' * t' rev option) -> t
 
     val generic : unit -> t
 
@@ -222,7 +223,7 @@ module type S = sig
    
   and Alignment_specifier : sig
     type t
-    val alignas_type : unit -> t
+    val alignas_type : Type_name.t -> t
     val alignas_expression : Expr.t located -> t
   end
 
@@ -269,17 +270,18 @@ module type S = sig
     type 'a t
 
     val make : 'a -> 'a t
-    val with_initializer : ('a * unit) -> 'a t
+    val with_initializer : ('a * C_initializer.t) -> 'a t
   end
 
   and Abstract_declarator : sig
+    type t = unit
 
   end
 
   and Pointer : sig
     type t
 
-    val make : (Type_qualifier.t list Util.Stored_reversed.t option * t option) -> t
+    val make : (Type_qualifier.t rev option * t option) -> t
 
   end
 
@@ -289,7 +291,7 @@ module type S = sig
     val identifier : General_identifier.t -> t
     val pointer : (Pointer.t option * t) -> t
 
-    type type_qualifier_list := Type_qualifier.t list Util.Stored_reversed.t option
+    type type_qualifier_list := Type_qualifier.t rev option
 
     val array : (t * type_qualifier_list * Expr.t located option) -> t 
     val static_array : (t * type_qualifier_list* Expr.t located) -> t
@@ -301,8 +303,15 @@ module type S = sig
   and Parameter_type_list : sig
     type t
 
-    val make : (unit list Util.Stored_reversed.t * bool) -> t
+    val make : (Parameter_declaration.t rev * bool) -> t
   end
+
+  and Parameter_declaration : sig
+    type t
+
+    val declarator : Declaration_specifiers.t * Declarator.t -> t
+    val abstract : Declaration_specifiers.t * Abstract_declarator.t option -> t
+  end 
 
   and Struct_declarator : sig
     type t
@@ -314,7 +323,7 @@ module type S = sig
   and Struct_declaration : sig
     type t
 
-    val make : (Specifier_qualifier_list.t * Struct_declarator.t list Util.Stored_reversed.t option) -> t
+    val make : (Specifier_qualifier_list.t * Struct_declarator.t rev option) -> t
 
     val static_assert : unit -> t
 
@@ -322,7 +331,7 @@ module type S = sig
 
   and Compound_statement : sig
     type t
-    val make : (Block_item.t list Util.Stored_reversed.t option) -> t
+    val make : (Block_item.t rev option) -> t
   end
 
   and Expression_statement : sig
@@ -382,6 +391,43 @@ module type S = sig
     type t
     val normal : Declaration_specifiers.t * Declarator.t Init_declarator.t list option -> t
     val typedef : Declaration_specifiers_typedef.t * Declarator.t Init_declarator.t list option -> t
+    val static_assert : Static_assert_declaration.t -> t
+  end
+
+  and Type_name : sig
+    type t
+    val make : Specifier_qualifier_list.t * Abstract_declarator.t option -> t
+
+  end
+
+  and Static_assert_declaration : sig
+    type t
+    val make : Expr.t located * C11lexer.Literal.String.t -> t
+  end
+
+  and C_initializer : sig
+    type t
+
+    val expression : Expr.t located -> t
+    val initializer_list : (Designator.t rev option * C_initializer.t) rev -> t
+
+  end
+
+  and Designator : sig
+    type t
+    val field : General_identifier.t -> t
+    val subscript : Expr.t located -> t
+  end
+
+  and Function_definition : sig
+    type t
+    val make : Declaration_specifiers.t * Declarator.t * Declaration.t rev option * Compound_statement.t -> t
+  end
+
+  and External_declaration : sig
+    type t
+    val function_definition : Function_definition.t -> t
+    val declaration : Declaration.t -> t
   end
 
 end

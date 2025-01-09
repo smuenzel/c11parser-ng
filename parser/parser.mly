@@ -143,7 +143,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 %token EOF
 
-%type<Context.snapshot> save_context function_definition1
+%type<Context.snapshot> save_context
 %type<Context.snapshot * Gen.Parameter_type_list.t> parameter_type_list
 %type<Context.snapshot Declarator.t * Gen.Declarator.t> declarator direct_declarator
 %type<Gen.Expr.t> unary_expression cast_expression postfix_expression additive_expression
@@ -153,6 +153,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 %type<string*Gen.Var_name.t> var_name
 %type<string*Gen.General_identifier.t> general_identifier
 %type<Gen.Declaration.t> declaration
+%type<Gen.Type_name.t> type_name
+%type<Gen.C_initializer.t> c_initializer
 
 (* There is a reduce/reduce conflict in the grammar. It corresponds to the
    conflict in the second declaration in the following snippet:
@@ -173,7 +175,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 %nonassoc below_ELSE
 %nonassoc ELSE
 
-%start<unit list> translation_unit_file
+%start<Gen.External_declaration.t list> translation_unit_file
 %start<Gen.Expr.t> single_expression
 
 %%
@@ -495,8 +497,8 @@ let declaration :=
 < Gen.Declaration.normal >
 | ~=declaration_specifiers_typedef; ~=init_declarator_list(as_typed(declarator_typedefname))?; ";";
 < Gen.Declaration.typedef >
-| static_assert_declaration;
-    { assert false }
+| ~=static_assert_declaration;
+< Gen.Declaration.static_assert >
 
 (* [declaration_specifier] corresponds to one declaration specifier in the C18
    standard, deprived of "typedef" and of type specifiers. *)
@@ -740,16 +742,17 @@ let parameter_list :=
 | ~=parameter_declaration; < Util.Stored_reversed.singleton >
 | ~=parameter_list; ","; ~=parameter_declaration; < Util.Stored_reversed.snoc >
 
-parameter_declaration:
-| declaration_specifiers declarator_varname
-| declaration_specifiers abstract_declarator?
-    {}
+let parameter_declaration :=
+| ~=declaration_specifiers; ~=drop_context(declarator_varname); 
+< Gen.Parameter_declaration.declarator >
+| ~=declaration_specifiers; ~=abstract_declarator?;
+< Gen.Parameter_declaration.abstract >
 
 let identifier_list := ~=separated_nonempty_list(",", as_typed(var_name)); <>
 
-type_name:
-| specifier_qualifier_list abstract_declarator?
-    {}
+let type_name :=
+| ~=specifier_qualifier_list; ~=abstract_declarator?;
+< Gen.Type_name.make >
 
 abstract_declarator:
 | pointer
@@ -765,15 +768,17 @@ direct_abstract_declarator:
 | ioption(direct_abstract_declarator) "(" scoped(parameter_type_list)? ")"
     {}
 
-c_initializer:
-| assignment_expression
-| "{" initializer_list ","? "}"
-    {}
+let c_initializer :=
+| ~=located(assignment_expression);
+< Gen.C_initializer.expression >
+| "{"; ~=initializer_list; ","?; "}";
+< Gen.C_initializer.initializer_list >
 
-initializer_list:
-| designation? c_initializer
-| initializer_list "," designation? c_initializer
-    {}
+let initializer_list :=
+| d=designation?; c=c_initializer;
+{ Util.Stored_reversed.singleton (d, c) }
+| l=initializer_list; ","; d=designation?; c=c_initializer;
+{ Util.Stored_reversed.snoc (l, (d, c)) }
 
 let designation :=
 | ~=designator_list; "="; <>
@@ -781,14 +786,15 @@ let designation :=
 let designator_list :=
 | ~=designator_list?; ~=designator; < Util.Stored_reversed.snoc_opt >
 
-designator:
-| "[" constant_expression "]"
-| "." general_identifier
-    {}
+let designator :=
+| "["; ~=located(constant_expression); "]";
+< Gen.Designator.subscript >
+| "."; ~=as_typed(general_identifier);
+< Gen.Designator.field >
 
-static_assert_declaration:
-| "_Static_assert" "(" constant_expression "," string_literal ")" ";"
-    {}
+let static_assert_declaration :=
+| "_Static_assert"; "("; ~=located(constant_expression); ","; ~=string_literal; ")"; ";";
+< Gen.Static_assert_declaration.make >
 
 let statement :=
 | ~=labeled_statement; < Gen.Statement.labeled >
@@ -858,20 +864,22 @@ let translation_unit_file :=
 | e=external_declaration; EOF;
 { [ e ] }
 
-external_declaration:
-| function_definition
-| declaration
-    {}
+let external_declaration :=
+| ~=function_definition; < Gen.External_declaration.function_definition >
+| ~=declaration; < Gen.External_declaration.declaration >
 
-function_definition1:
-| declaration_specifiers d = declarator_varname
+let function_definition1 :=
+| s = declaration_specifiers; d = declarator_varname;
     { let ctx = Context.save_context () in
       Declarator.reinstall_function_context (module Context) (fst d);
-      ctx }
+      ctx, (s, (snd d)) }
 
-function_definition:
-| ctx = function_definition1 declaration_list? compound_statement
-    { Context.restore_context ctx }
+let function_definition :=
+| fd1 = function_definition1; dl=declaration_list?; cs=compound_statement;
+    { let ctx, (s, d) = fd1 in
+    Context.restore_context ctx;
+    Gen.Function_definition.make (s, d, dl, cs)
+    }
 
 let declaration_list :=
 | ~=declaration;
