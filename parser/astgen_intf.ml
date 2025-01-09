@@ -273,11 +273,6 @@ module type S = sig
     val with_initializer : ('a * C_initializer.t) -> 'a t
   end
 
-  and Abstract_declarator : sig
-    type t = unit
-
-  end
-
   and Pointer : sig
     type t
 
@@ -298,6 +293,24 @@ module type S = sig
     val unspecified_size_variable_array : (t * type_qualifier_list) -> t
 
     val function_ : t * (Parameter_type_list.t, Var_name.t list option) Either.t -> t
+  end
+
+  and Abstract_declarator : sig
+    type t
+
+    val pointer : Pointer.t -> t
+    val direct : Pointer.t option * Direct_abstract_declarator.t -> t
+  end
+
+  and Direct_abstract_declarator : sig
+    type t
+
+    val abstract : Abstract_declarator.t -> t
+
+    val array : t option * Type_qualifier.t rev option * Expr.t located option -> t
+    val static_array : t option * Type_qualifier.t rev option * Expr.t located -> t
+    val unspecified_size_variable_array : t option -> t
+    val function_ : t option * Parameter_type_list.t option -> t
   end
 
   and Parameter_type_list : sig

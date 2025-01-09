@@ -754,19 +754,25 @@ let type_name :=
 | ~=specifier_qualifier_list; ~=abstract_declarator?;
 < Gen.Type_name.make >
 
-abstract_declarator:
-| pointer
-| ioption(pointer) direct_abstract_declarator
-    {}
+let abstract_declarator :=
+| ~=pointer;
+< Gen.Abstract_declarator.pointer >
+| ~=ioption(pointer); ~=direct_abstract_declarator;
+< Gen.Abstract_declarator.direct >
 
-direct_abstract_declarator:
-| "(" save_context abstract_declarator ")"
-| direct_abstract_declarator? "[" ioption(type_qualifier_list) assignment_expression? "]"
-| direct_abstract_declarator? "[" "static" type_qualifier_list? assignment_expression "]"
-| direct_abstract_declarator? "[" type_qualifier_list "static" assignment_expression "]"
-| direct_abstract_declarator? "[" "*" "]"
-| ioption(direct_abstract_declarator) "(" scoped(parameter_type_list)? ")"
-    {}
+let direct_abstract_declarator :=
+| "("; save_context; ~=abstract_declarator; ")";
+< Gen.Direct_abstract_declarator.abstract >
+| ~=direct_abstract_declarator?; "["; ~=ioption(type_qualifier_list); ~=located(assignment_expression)?; "]";
+< Gen.Direct_abstract_declarator.array >
+| ~=direct_abstract_declarator?; "["; "static"; ~=type_qualifier_list?; ~=located(assignment_expression); "]";
+< Gen.Direct_abstract_declarator.static_array >
+| d=direct_abstract_declarator?; "["; t=type_qualifier_list; "static"; e=located(assignment_expression); "]";
+{ Gen.Direct_abstract_declarator.static_array (d, Some t, e) }
+| ~=direct_abstract_declarator?; "["; "*"; "]";
+< Gen.Direct_abstract_declarator.unspecified_size_variable_array >
+| ~=ioption(direct_abstract_declarator); "("; ~=drop_context(scoped(parameter_type_list))?; ")";
+< Gen.Direct_abstract_declarator.function_ >
 
 let c_initializer :=
 | ~=located(assignment_expression);
