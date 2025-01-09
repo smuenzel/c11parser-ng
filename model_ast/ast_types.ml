@@ -164,7 +164,7 @@ module Literal = struct
       [@@deriving sexp, compare, hash, variants]
     end
 
-    type t =
+    type t = C11lexer.Literal.Char.t =
       { kind : Kind.t
       ; value : Element.t list
       } [@@deriving sexp, compare, hash]
@@ -200,7 +200,7 @@ module Constant = struct
     | Integer of string
     | Decimal_floating of string
     | Hexadecimal_floating of string
-  [@@deriving sexp, compare, hash]
+  [@@deriving sexp, compare, hash, variants]
 end
 
 module Make(L : Located) = struct
@@ -636,12 +636,19 @@ module Make(L : Located) = struct
     [@@deriving sexp, compare, hash, variants]
   end = Designator
 
-end
+  and Function_definition : sig
+    type t =
+      { specifiers : Declaration_specifiers.t
+      ; declarator : Declarator.t
+      ; arguments : Declaration.t list
+      ; body : Compound_statement.t
+      } [@@deriving sexp, compare, hash]
+  end = Function_definition
 
-(*
-open struct
-  module _ (L : Located) : C11parser.Astgen_intf.S = struct
-    include Make(L)
-  end
+  and External_declaration : sig
+    type t =
+      | Function of Function_definition.t
+      | Declaration of Declaration.t
+    [@@deriving sexp, compare, hash, variants]
+  end = External_declaration
 end
-   *)

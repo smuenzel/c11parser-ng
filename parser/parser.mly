@@ -651,7 +651,7 @@ let enumerator_list :=
 let enumerator :=
 | i = enumeration_constant;
 { Context.declare_varname (fst i); Gen.Enum_constant.named (snd i) }
-| i = enumeration_constant; "="; value=constant_expression;
+| i = enumeration_constant; "="; value=located(constant_expression);
     { Context.declare_varname (fst i); Gen.Enum_constant.named ~value (snd i) }
 
 enumeration_constant:

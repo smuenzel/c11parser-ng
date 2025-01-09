@@ -159,7 +159,7 @@ module type S = sig
   module rec Enum_constant : sig
     type t
 
-    val named : ?value:Expr.t -> General_identifier.t -> t
+    val named : ?value:Expr.t located -> General_identifier.t -> t
   end
 
   and Enum : sig
@@ -203,8 +203,8 @@ module type S = sig
   and Expr : sig
     type t
     type t' := t located
-    type 'op binary = t' * 'op * t' -> t
-    type 'op unary = 'op * t' -> t
+    type 'op binary := t' * 'op * t' -> t
+    type 'op unary := 'op * t' -> t
 
     val equality : Equality_operator.t binary
     val relational : Relational_operator.t binary
