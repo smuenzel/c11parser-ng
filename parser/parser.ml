@@ -7,20 +7,21 @@ module Make
 
   type token = Raw.token
 
-  exception Syntax_error of int * int * C11lexer.Token.t * string * int
+  exception Syntax_error of int * int * C11lexer.Token.t * C11lexer.Token.t * string * int
 
   let token_string token =
     C11lexer.Token.sexp_of_t token
     |> Sexplib0.Sexp.to_string
 
   let syntax_error_printer = function
-    | Syntax_error (line, col, token, msg, state) ->
+    | Syntax_error (line, col, token_last, token_now, msg, state) ->
       Some (Printf.sprintf
-              "Syntax error at line %d, column %d: '%s' (last token: %s, state: %d)"
+              "Syntax error at line %d, column %d: '%s' (last token: %s, current token: %s, state: %d)"
               line
               col
               (String.trim msg)
-              (token_string token)
+              (token_string token_last)
+              (token_string token_now)
               state)
     | _ -> None
 
@@ -50,15 +51,19 @@ module Make
       f lexer old_lexbuf
     with
     | Raw.Error e ->
-      let msg = Error_messages.message e in
+      let msg = 
+        try Error_messages.message e 
+        with
+        | Not_found -> "Unknown error"
+      in
       let p = Sedlexing.lexing_position_curr lexbuf in
-      raise (Syntax_error (p.pos_lnum, p.pos_cnum - p.pos_bol, !last_token, msg, e))
+      raise (Syntax_error (p.pos_lnum, p.pos_cnum - p.pos_bol, !last_token, !current_token, msg, e))
     | C11lexer.Lexer_error (_, l0, c0, _, _) as error ->
       let msg =
         Printf.sprintf
           "Lexer error: %s" (Option.value ~default:"" (C11lexer.print_lexer_error error))
       in
-      raise (Syntax_error (l0, c0, !last_token, msg, 0))
+      raise (Syntax_error (l0, c0, !last_token, !current_token, msg, 0))
 
 
   let translation_unit_file =

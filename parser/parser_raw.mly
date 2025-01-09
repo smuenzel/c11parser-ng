@@ -687,7 +687,12 @@ let alignment_specifier :=
 let declarator :=
 | p=ioption(pointer); d = direct_declarator;
     { let parser_d, result_d = d in
-      let result = Gen.Declarator.pointer (p, result_d) in
+      let result = 
+        match p with
+        | None -> result_d
+        | Some p ->
+            Gen.Declarator.pointer (p, result_d)
+      in
       Declarator.other_declarator parser_d, result }
 
 (* The occurrences of [save_context] inside [direct_declarator] and

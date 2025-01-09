@@ -433,7 +433,7 @@ module Make(L : Located) = struct
       | Function of
           { declarator : t
           ; parameters :
-              (Parameter_type_list.t, Var_name.t list option) Either.t
+              (Parameter_type_list.t, Var_name.t list) Either.t
           }
     [@@deriving sexp, compare, hash, variants]
   end = Declarator

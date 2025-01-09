@@ -1075,7 +1075,7 @@ void f(void) {
 }
     |};
 [%expect.unreachable]
-[@@expect.uncaught_exn {| ("Syntax error at line 9, column 11: 'A typedef name is used in an incorrect context.' (last token: (VARIABLE T), state: 425)") |}]
+[@@expect.uncaught_exn {| ("Syntax error at line 9, column 11: 'The last token was expected to be a typedef name, but it is a variable name.' (last token: (VARIABLE T), current token: (NAME x), state: 425)") |}]
 
 
 let%expect_test "declaration_ambiguity" =

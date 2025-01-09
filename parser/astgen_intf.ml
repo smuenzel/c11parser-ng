@@ -296,7 +296,7 @@ module type S = sig
     type t
 
     val identifier : General_identifier.t -> t
-    val pointer : (Pointer.t option * t) -> t
+    val pointer : (Pointer.t * t) -> t
 
     type type_qualifier_list := Type_qualifier.t rev option
 

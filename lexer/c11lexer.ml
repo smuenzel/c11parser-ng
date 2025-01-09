@@ -179,7 +179,6 @@ let literal_string_prefix lexbuf =
     | "u\"" -> `U16
     | "U\"" -> `U32
     | "u8" -> `Utf8
-    | "\"" -> `Plain
     | _ -> raise_lexer_error lexbuf "invalid literal string prefix"
 
 let rec initial lexbuf : Token.t =
@@ -191,7 +190,8 @@ let rec initial lexbuf : Token.t =
   | integer_constant              ->  CONSTANT_INTEGER (c lexbuf)
   | decimal_floating_constant     ->  CONSTANT_DECIMAL_FLOATING (c lexbuf)
   | hexadecimal_floating_constant ->  CONSTANT_HEXADECIMAL_FLOATING (c lexbuf)
-  | preprocessing_number          ->  failwith "These characters form a preprocessor number, but not a constant" 
+  | preprocessing_number          ->  
+    raise_lexer_error lexbuf "These characters form a preprocessor number, but not a constant" 
   | (Chars "LuU" | ""), "'"       ->
     let kind = literal_char_prefix lexbuf in
     let element = char lexbuf in

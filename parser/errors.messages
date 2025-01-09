@@ -10,4 +10,4 @@ translation_unit_file: BOOL NAME TYPE LBRACE NAME VARIABLE WHILE
 ## var_name
 ##
 
-A typedef name is used in an incorrect context.
+The last token was expected to be a typedef name, but it is a variable name.

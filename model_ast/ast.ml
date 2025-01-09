@@ -156,9 +156,7 @@ module Make(L : Located) = struct
   module Declarator = struct
     include T.Declarator
 
-    let pointer = function
-      | None, t -> t
-      | Some p, t -> Pointer { pointer = p; inner = t }
+    let pointer (p, t) = Pointer { pointer = p; inner = t }
 
     let array (declarator, qualifiers, size) =
       let qualifiers = Util.Stored_reversed.opt_to_list qualifiers in
@@ -174,6 +172,9 @@ module Make(L : Located) = struct
 
     let function_ (declarator, parameters) =
       let parameters = Util.Either.of_caml parameters in
+      let parameters =
+        Base.Either.map  ~first:Base.Fn.id ~second:(Option.value ~default:[]) parameters
+      in
       function_ ~declarator ~parameters
   end
 
