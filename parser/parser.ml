@@ -28,7 +28,8 @@ module Make
         ; state
         } ->
       Some (Printf.sprintf
-              "Syntax error at line %d, column %d: '%s' (last token: %s, current token: %s, state: %d)"
+              "Syntax error at line %d, column %d: \
+               '%s' (last token: %s, current token: %s, state: %d)"
               line
               col
               (String.trim msg)
