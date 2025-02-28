@@ -1,9 +1,9 @@
 C11parser-ng
 ============
 
-##### A correct C89/C90/C99/C11/C18 parser written using Menhir, Sedlex and OCaml
+##### A potentially correct C89/C90/C99/C11/C18 parser written using Menhir, Sedlex and OCaml
 
-Based on the original C11parser by Jacques-Henri Jourdan and François Pottier, see
+Based on the original (correct) C11parser by Jacques-Henri Jourdan and François Pottier, see
 README.orig.md for details.
 
 This version converts the original lexer to sedlex and changes many of the menhir
