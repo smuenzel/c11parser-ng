@@ -1,3 +1,11 @@
+(* SPDX-License-Identifier: BSD-3-Clause
+ * SPDX-FileCopyrightText: (c) 2016-2017, Inria
+ * SPDX-FileCopyrightText: (c) 2024-2025, Stefan Muenzel
+ * SPDX-FileContributor: Jacques-Henri Jourdan, Inria Paris
+ * SPDX-FileContributor: Francois Pottier, Inria Paris
+ * SPDX-FileContributor: Stefan Muenzel
+ *)
+
 open Core
 open Include
 

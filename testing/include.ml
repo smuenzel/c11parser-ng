@@ -1,3 +1,7 @@
+(* SPDX-License-Identifier: BSD-3-Clause
+ * SPDX-FileCopyrightText: (c) 2024-2025 Stefan Muenzel
+ *)
+
 open Core
 
 module Ast = Model_ast.Ast.Make(Model_ast.Ast_types.Dummy_located)
