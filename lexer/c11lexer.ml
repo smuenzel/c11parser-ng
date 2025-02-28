@@ -31,11 +31,15 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 module Token = Token
 module Literal = Literal
 
-exception Lexer_error of string * int * int * int * int
+exception Lexer_error of 
+    { state : string
+    ; pos_start : int * int
+    ; pos_end : int * int
+    }
 
 let print_lexer_error = function
-  | Lexer_error (s, l1, c1, l2, c2) ->
-    Some (Printf.sprintf "%s: %d:%d-%d:%d\n" s l1 c1 l2 c2)
+  | Lexer_error { state; pos_start = (l1, c1); pos_end = (l2, c2)} ->
+    Some (Printf.sprintf "%s: %d:%d-%d:%d\n" state l1 c1 l2 c2)
   | _ -> None
 
 let () =
@@ -44,11 +48,10 @@ let () =
 let raise_lexer_error lexbuf state =
   let pos_start, pos_end = Sedlexing.lexing_positions lexbuf in
   raise (Lexer_error
-           ( state
-           , pos_start.pos_lnum
-           , pos_start.pos_cnum - pos_start.pos_bol
-           , pos_end.pos_lnum
-           , pos_end.pos_cnum - pos_end.pos_bol))
+          { state
+          ; pos_start = pos_start.pos_lnum, pos_start.pos_cnum - pos_start.pos_bol
+          ; pos_end = pos_end.pos_lnum, pos_end.pos_cnum - pos_end.pos_bol
+          })
 
 (* Identifiers *)
 let digit = [%sedlex.regexp? '0' .. '9']
@@ -457,12 +460,3 @@ let lexer (state : State.t) (lexbuf : Sedlexing.lexbuf) : Token.t =
     | _, _ ->
       state.kind <- Regular;
       token
-
-(*
-let lexer state lexbuf =
-  let token = lexer state lexbuf in
-  Token.sexp_of_t token
-  |> Sexplib0.Sexp.to_string
-  |> print_endline;
-  token
-   *)
