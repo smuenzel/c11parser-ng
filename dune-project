@@ -6,20 +6,20 @@
 (generate_opam_files true)
 
 (source
- (github username/reponame))
+ (github smuenzel/c11parser-ng))
 
-(authors "Author Name")
+(authors "Stefan Muenzel" "Jacques-Henri Jourdan" "Francois Pottier")
 
-(maintainers "Maintainer Name")
+(maintainers "Stefan Muenzel")
 
-(license LICENSE)
+(license BSD-3-Clause)
 
 (documentation https://url/to/documentation)
 
 (package
  (name c11parser_ng)
- (synopsis "A short synopsis")
- (description "A longer description")
+ (synopsis "A c11 parser")
+ (description "A c11 parser")
  (depends ocaml dune)
  (tags
   (topics "to describe" your project)))
