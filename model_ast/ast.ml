@@ -1,3 +1,6 @@
+(* SPDX-License-Identifier: BSD-3-Clause
+ * SPDX-FileCopyrightText: (c) 2024-2025 Stefan Muenzel
+ *)
 
 module type Located = Ast_types.Located
 

@@ -1,12 +1,10 @@
-(* SPDX-License-Identifier: BSD-3-Clause *)
-(*
-Jacques-Henri Jourdan, Inria Paris
-François Pottier, Inria Paris
-
-Copyright (c) 2016-2017, Inria
-Copyright (c) 2024-2025, Stefan Muenzel
-All rights reserved.
-*)
+(* SPDX-License-Identifier: BSD-3-Clause
+ * SPDX-FileCopyrightText: (c) 2016-2017, Inria
+ * SPDX-FileCopyrightText: (c) 2024-2025, Stefan Muenzel
+ * SPDX-FileContributor: Jacques-Henri Jourdan, Inria Paris
+ * SPDX-FileContributor: Francois Pottier, Inria Paris
+ * SPDX-FileContributor: Stefan Muenzel
+ *)
 
 (* WARNING. When processing this grammar, Menhir should announce that
    ONE shift/reduce conflict was silently solved and that ONE state
