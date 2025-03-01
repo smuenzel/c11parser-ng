@@ -7,7 +7,7 @@ open Include
 
 let%expect_test "" =
   Printexc.record_backtrace false;
-  test
+  test_parser
     {|
 typedef int x;
 
@@ -22,7 +22,7 @@ _Bool x { q while
 
 let%expect_test "" =
   Printexc.record_backtrace false;
-  test
+  test_parser
     {|
 typedef int x;
 
@@ -40,7 +40,7 @@ _Bool x { q : ; }
 
 let%expect_test "" =
   Printexc.record_backtrace false;
-  test
+  test_parser
     {|
 typedef int x;
 
@@ -61,7 +61,7 @@ _Bool x() { q : ; }
 
 
 let%expect_test "" =
-  test
+  test_parser
     {|
 typedef int x;
 

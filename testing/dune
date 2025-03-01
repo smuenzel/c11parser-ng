@@ -1,6 +1,6 @@
 (library
   (name testing)
-  (libraries c11parser c11lexer base core_kernel model_ast)
+  (libraries c11parser c11lexer base core_kernel model_ast preprocessor)
   (preprocess (pps ppx_sexp_conv ppx_bin_prot ppx_gen_rec ppx_jane))
   (inline_tests)
   )

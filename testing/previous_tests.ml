@@ -10,7 +10,7 @@ open Core
 open Include
 
 let%expect_test "aligned_struct_c18" =
-  test
+  test_parser
     {|
 struct {
   _Alignas(int) char x;
@@ -40,7 +40,7 @@ struct {
   |}]
 
 let%expect_test "argument_scope" =
-  test
+  test_parser
     {|
 typedef struct foo foo;
 
@@ -74,7 +74,7 @@ void blah(int foo) {
   |}]
 
 let%expect_test "atomic" =
-  test
+  test_parser
     {|
 typedef _Atomic(int) atomic_int;
 typedef _Atomic int atomic_int;
@@ -256,7 +256,7 @@ int *const _Atomic atomic_return_type();
   |}]
 
 let%expect_test "atomic_parenthesis" =
-  test
+  test_parser
     {|
 // atomic_parenthesis.c
 int _Atomic (x);
@@ -268,7 +268,7 @@ int _Atomic (x);
   |}]
 
 let%expect_test "bitfield_declaration_ambiguity" =
-  test
+  test_parser
     {|
 // bitfield_declaration_ambiguity.c
 typedef signed int T;
@@ -304,7 +304,7 @@ struct S {
 
 
 let%expect_test "bitfield_declaration_ambiguity.fail" =
-  test
+  test_parser
     {|
 typedef signed int T;
 struct S {
@@ -352,7 +352,7 @@ int f(struct S s) {
   |}]
 
 let%expect_test "bitfield_declaration_ambiguity.ok" =
-  test
+  test_parser
     {|
 typedef signed int T;
 struct S {
@@ -400,7 +400,7 @@ int f(struct S s) {
 
 
 let%expect_test "block_scope" =
-  test
+  test_parser
     {|
 // block_scope.c
 typedef int T;
@@ -454,7 +454,7 @@ void f(void) {
   |}]
 
 let%expect_test "c11-noreturn" =
-  test
+  test_parser
     {|
 _Noreturn int f();
 int _Noreturn f();
@@ -473,7 +473,7 @@ int _Noreturn f();
 
 
 let%expect_test "c1x-alignas" =
-  test
+  test_parser
     {|
 _Alignas(4) char c1;
 unsigned _Alignas(long) char c2;
@@ -519,7 +519,7 @@ char _Alignas(_Alignof(int)) c5;
   |}]
 
 let%expect_test "char-literal-printing" =
-  test
+  test_parser
     {|
 int    test1(void) { return '\\'; }
 int test2(void) { return L'\\'; }
@@ -855,7 +855,7 @@ int test25(void) { return L'\x333'; }
   |}]
 
 let%expect_test "c-namespace" =
-  test
+  test_parser
     {|
 void bla1() {
   struct XXX;
@@ -881,7 +881,7 @@ void bla1() {
   |}]
 
 let%expect_test "control-scope" =
-  test
+  test_parser
     {|
 int f (int z) {
   if (z + sizeof (enum {a}))
@@ -933,7 +933,7 @@ int f (int z) {
   |}]
 
 let%expect_test "dangling_else" =
-  test
+  test_parser
     {|
 // dangling_else.c
 int f(void) {
@@ -969,7 +969,7 @@ int f(void) {
 
 
 let%expect_test "dangling_else_lookahead" =
-  test
+  test_parser
     {|
 // dangling_else_lookahead.c
 typedef int T;
@@ -1018,7 +1018,7 @@ void f(void) {
   |}]
 
 let%expect_test "dangling_else_lookahead.if" =
-  test
+  test_parser
     {|
 // dangling_else_lookahead.c
 typedef int T;
@@ -1069,7 +1069,7 @@ void f(void) {
 
 let%expect_test "dangling_else_misleading.fail" =
   Printexc.record_backtrace false;
-  test
+  test_parser
     {|
 // dangling_else_misleading.fail.c
 typedef int T;
@@ -1091,7 +1091,7 @@ void f(void) {
 
 
 let%expect_test "declaration_ambiguity" =
-  test
+  test_parser
     {|
 // declaration_ambiguity.c
 typedef int T;
@@ -1138,7 +1138,7 @@ void f (void) {
   |}]
 
 let%expect_test "declarators" =
-  test
+  test_parser
     {|
 extern int a1[];
 
@@ -1396,7 +1396,7 @@ int PR20634 = sizeof(struct { int n; } [5]);
 
 
 let%expect_test "declarator_visibility" =
-  test
+  test_parser
     {|
 // declarator_visibility.c
 typedef int T, T1(T);   // T is visible when declaring T1.
@@ -1468,7 +1468,7 @@ void f(void) {
   |}]
 
 let%expect_test "designator" =
-  test
+  test_parser
     {|
 // RUN: %clang_cc1 -fsyntax-only %s -verify -pedantic
 
@@ -1532,7 +1532,7 @@ struct foo Y[10] = {
 
 
 let%expect_test "enum" =
-  test
+  test_parser
     {|
 // enum.c
 typedef enum { a, b = a } foo;
@@ -1554,7 +1554,7 @@ typedef enum { a, b = a } foo;
   |}]
 
 let%expect_test "enum_constant_visibility" =
-  test
+  test_parser
     {|
 // enum_constant_visibility.c
 typedef int T;
@@ -1616,7 +1616,7 @@ void f(void) {
   |}]
 
 let%expect_test "enum_shadows_typedef" =
-  test
+  test_parser
     {|
 // enum_shadows_typedef.c
 typedef int T;
@@ -1675,7 +1675,7 @@ void f(void) {
   |}]
 
 let%expect_test "enum-trick" =
-  test
+  test_parser
     {|
 // enum-trick.c
 int printf(const char* restrict, ...);
@@ -1761,7 +1761,7 @@ int main(int argc, char *argv[]) {
   |}]
 
 let%expect_test "expressions" =
-  test
+  test_parser
     {|
 void test1() {
   if (sizeof (int){ 1}) {}   // sizeof compound literal
@@ -2015,7 +2015,7 @@ void test_sizeof(){
   |}]
 
 let%expect_test "function-decls" =
-  test
+  test_parser
     {|
 void foo() {
   int X;
@@ -2110,7 +2110,7 @@ void foo() {
   |}]
 
 let%expect_test "function_parameter_scope" =
-  test
+  test_parser
     {|
 // function_parameter_scope.c
 typedef long T, U;
@@ -2178,7 +2178,7 @@ T x[(U)V+1]; // T and U again denote types; V remains visible
   |}]
 
 let%expect_test "function_parameter_scope_extends" =
-  test
+  test_parser
     {|
 // function_parameter_scope_extends.c
 typedef long T, U;
@@ -2253,7 +2253,7 @@ enum {V} (*f(T T, enum {U} y, int x[T+U]))(T t) {
   |}]
 
 let%expect_test "if_scopes" =
-  test
+  test_parser
     {|
 // if_scopes.c
 typedef int T, U;
@@ -2352,7 +2352,7 @@ void f(void) {
   |}]
 
 let%expect_test "local_scope" =
-  test
+  test_parser
     {|
 // local_scope.c
 typedef int T;
@@ -2406,7 +2406,7 @@ void f(void) {
   |}]
 
 let%expect_test "local_typedef" =
-  test
+  test_parser
     {|
 // local_typedef.c
 typedef int T1;      // Declaration of type T1 as int
@@ -2454,7 +2454,7 @@ void f(void) {
   |}]
 
 let%expect_test "long-long-struct" =
-  test
+  test_parser
     {|
 typedef struct {
   long long foo;
@@ -2478,7 +2478,7 @@ typedef struct {
   |}]
 
 let%expect_test "loop_scopes" =
-  test
+  test_parser
     {|
 // loop_scopes.c
 typedef int T, U;
@@ -2618,7 +2618,7 @@ void f(void) {
   |}]
 
 let%expect_test "namespaces" =
-  test
+  test_parser
     {|
 // namespaces.c
 typedef int S, T, U;
@@ -2719,7 +2719,7 @@ void f(void) {
   |}]
 
 let%expect_test "no_local_scope" =
-  test
+  test_parser
     {|
 // no_local_scope.c
 typedef int T, U, V;
@@ -2796,7 +2796,7 @@ int f(void) {
   |}]
 
 let%expect_test "parameter_declaration_ambiguity" =
-  test
+  test_parser
     {|
 // parameter_declaration_ambiguity.c
 typedef int T;
@@ -2835,7 +2835,7 @@ void f(int(x), int(T), int T);
   |}]
 
 let%expect_test "parameter_declaration_ambiguity.test" =
-  test
+  test_parser
     {|
 typedef int T;
 
@@ -2869,7 +2869,7 @@ void f(int(T), T x);
   |}]
 
 let%expect_test "statements" =
-  test
+  test_parser
     {|
 void test1() {
   { ; {  ;;}} ;;
@@ -3073,7 +3073,7 @@ void test5() {
   |}]
 
 let%expect_test "struct-recursion" =
-  test
+  test_parser
     {|
 // RUN: %clang_cc1 %s -fsyntax-only
 
@@ -3133,7 +3133,7 @@ struct s2 b;
   |}]
 
 let%expect_test "typedef_star" =
-  test
+  test_parser
     {|
 // typedef_star.c
 typedef int T;
@@ -3163,7 +3163,7 @@ void f(void) {
   |}]
 
 let%expect_test "types" =
-  test
+  test_parser
     {|
 typedef int X;
 struct Y { short X; };
@@ -3221,7 +3221,7 @@ void test() {
   |}]
 
 let%expect_test "variable_star" =
-  test
+  test_parser
     {|
 // variable_star.c
 int T, b;

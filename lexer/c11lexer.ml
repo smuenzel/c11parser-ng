@@ -174,6 +174,7 @@ let rec initial lexbuf : Token.t =
   | preprocessing_number          ->  
     raise_lexer_error lexbuf "These characters form a preprocessor number, but not a constant" 
   | (Chars "LuU" | ""), "'"       ->
+    (* CR smuenzel: check token positions *)
     let kind = literal_char_prefix lexbuf in
     let element = char lexbuf in
     let excess_elements = char_literal_end lexbuf in

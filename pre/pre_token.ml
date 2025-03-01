@@ -127,7 +127,7 @@ end
 
 module Position = struct
   type t = Lexing.position =
-    { pos_fname : string
+    { pos_fname : string [@sexp.default ""] [@sexp_drop_default String.equal]
     ; pos_lnum : int
     ; pos_bol : int
     ; pos_cnum : int
@@ -151,10 +151,10 @@ type t =
   | Header_name of header_name
   | Identifier of string
   | Preprocessing_number of string
-  | Character_constant
+  | Character_constant of C11lexer.Literal.Char.t
   | String_literal of string
   | Punctuator of { preceeded_by_whitespace : bool; value : string }
-  | Single_char
+  | Single_char of string
   | Newline
   | Eof
 [@@deriving sexp]
@@ -212,6 +212,9 @@ let punctuator =
 let white_space_no_newline =
   [%sedlex.regexp? Sub(white_space, '\n')]
 
+let non_whitespace_char = 
+  [%sedlex.regexp? Compl (white_space)]
+
 let c lexbuf =
   Sedlexing.Utf8.lexeme lexbuf
 
@@ -219,32 +222,56 @@ let cn lexbuf a b =
   let len = if b < 0 then Sedlexing.lexeme_length lexbuf + b - a else b - a in
   Sedlexing.Utf8.sub_lexeme lexbuf a len
 
-let produce_with_position lexbuf token =
+let produce_with_position ?start_pos lexbuf token =
   let start, end_ = Sedlexing.lexing_positions lexbuf in
+  let start =
+    match start_pos with
+    | Some start_pos -> start_pos
+    | None -> start
+  in
   Token_properties.{ start; end_ }, token
 
-let produce_plain _ token = token
+let produce_plain ?start_pos:_ _ token = token
 
-let rec next_token ~produce lexbuf =
+let rec next_token ~(produce : ?start_pos:_ -> _ -> _) lexbuf =
   match%sedlex lexbuf with
   | "//", Star (Compl '\n'), '\n' -> produce lexbuf Newline
   | "//", Star (Compl '\n'), eof -> produce lexbuf Eof
   | "/*" -> skip_comment ~produce lexbuf
+  | (Chars "LuU" | ""), "'" ->
+    let start_pos = Sedlexing.lexing_position_start lexbuf in
+    let kind = C11lexer.literal_char_prefix lexbuf in
+    let element = C11lexer.char lexbuf in
+    let excess_elements = C11lexer.char_literal_end lexbuf in
+    produce ~start_pos lexbuf
+      (Character_constant { kind; value = element :: excess_elements })
   | identifier -> produce lexbuf (Identifier (c lexbuf))
   | preprocessing_number -> produce lexbuf (Preprocessing_number (c lexbuf))
   | header_name_h -> produce lexbuf (Header_name (System, cn lexbuf 1 (-1)))
   | header_name_q -> produce lexbuf (Header_name (Local, cn lexbuf 1 (-1)))
   | Plus white_space_no_newline, punctuator ->
-    produce lexbuf (Punctuator { preceeded_by_whitespace = true; value = c lexbuf })
+    let value = String.trim (c lexbuf) in
+    (* CR smuenzel: position will be misleading *)
+    produce lexbuf (Punctuator { preceeded_by_whitespace = true; value })
   | punctuator ->
     (* CR smuenzel: need to consider comment for whitespace, or could make this position-based? *)
     produce lexbuf (Punctuator { preceeded_by_whitespace = false; value = c lexbuf })
   | '\n' -> produce lexbuf Newline
   | Plus white_space_no_newline -> next_token ~produce lexbuf
   | eof -> produce lexbuf Eof
+  | non_whitespace_char ->
+    produce lexbuf (Single_char (c lexbuf))
   | _ -> assert false
 and skip_comment ~produce lexbuf =
   match%sedlex lexbuf with
   | "*/" -> next_token ~produce lexbuf
   | any -> skip_comment ~produce lexbuf
   | _ -> assert false
+
+let all_tokens ~produce lexbuf =
+  let [@ocaml.tail_mod_cons] rec loop lexbuf =
+    match%sedlex lexbuf with
+    | eof -> []
+    | _ -> next_token ~produce lexbuf :: loop lexbuf
+  in
+  loop lexbuf
