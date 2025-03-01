@@ -233,7 +233,7 @@ let produce_with_position ?start_pos lexbuf token =
 
 let produce_plain ?start_pos:_ _ token = token
 
-let rec next_token ~(produce : ?start_pos:_ -> _ -> _) lexbuf =
+let rec next_token ~has_whitespace ~(produce : ?start_pos:_ -> _ -> _) lexbuf =
   match%sedlex lexbuf with
   | "//", Star (Compl '\n'), '\n' -> produce lexbuf Newline
   | "//", Star (Compl '\n'), eof -> produce lexbuf Eof
@@ -249,24 +249,22 @@ let rec next_token ~(produce : ?start_pos:_ -> _ -> _) lexbuf =
   | preprocessing_number -> produce lexbuf (Preprocessing_number (c lexbuf))
   | header_name_h -> produce lexbuf (Header_name (System, cn lexbuf 1 (-1)))
   | header_name_q -> produce lexbuf (Header_name (Local, cn lexbuf 1 (-1)))
-  | Plus white_space_no_newline, punctuator ->
-    let value = String.trim (c lexbuf) in
-    (* CR smuenzel: position will be misleading *)
-    produce lexbuf (Punctuator { preceeded_by_whitespace = true; value })
   | punctuator ->
-    (* CR smuenzel: need to consider comment for whitespace, or could make this position-based? *)
-    produce lexbuf (Punctuator { preceeded_by_whitespace = false; value = c lexbuf })
+    produce lexbuf (Punctuator { preceeded_by_whitespace = has_whitespace; value = c lexbuf })
   | '\n' -> produce lexbuf Newline
-  | Plus white_space_no_newline -> next_token ~produce lexbuf
+  | Plus white_space_no_newline -> next_token ~has_whitespace:true ~produce lexbuf
   | eof -> produce lexbuf Eof
   | non_whitespace_char ->
     produce lexbuf (Single_char (c lexbuf))
   | _ -> assert false
 and skip_comment ~produce lexbuf =
   match%sedlex lexbuf with
-  | "*/" -> next_token ~produce lexbuf
+  | "*/" -> next_token ~has_whitespace:true ~produce lexbuf
   | any -> skip_comment ~produce lexbuf
   | _ -> assert false
+
+let next_token ~produce lexbuf =
+  next_token ~has_whitespace:false ~produce lexbuf
 
 let all_tokens ~produce lexbuf =
   let [@ocaml.tail_mod_cons] rec loop lexbuf =
