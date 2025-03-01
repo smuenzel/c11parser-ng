@@ -31,8 +31,9 @@ module Make
         ; state
         } ->
       Some (Printf.sprintf
-              "Syntax error at line %d, column %d: \
-               '%s' (last token: %s, current token: %s, state: %d)"
+              "Syntax error at line %d, column %d:\n\
+               '%s'\n\
+               (last token: %s, current token: %s, state: %d)"
               line
               col
               (String.trim msg)
@@ -83,7 +84,7 @@ module Make
     | C11lexer.Lexer_error { pos_start = (l0, c0);  _ } as error ->
       let msg =
         Printf.sprintf
-          "Lexer error: %s" (Option.value ~default:"" (C11lexer.print_lexer_error error))
+          "Lexer error:\n%s" (Option.value ~default:"" (C11lexer.print_lexer_error error))
       in
       raise (Syntax_error 
                { pos = l0, c0

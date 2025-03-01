@@ -14,7 +14,11 @@ typedef int x;
 _Bool x { q while
     |};
   [%expect.unreachable]
-[@@expect.uncaught_exn {| ("Syntax error at line 4, column 17: 'The last token was expected to be a typedef name, but it is a variable name.' (last token: (VARIABLE q), current token: WHILE, state: 425)") |}]
+[@@expect.uncaught_exn {|
+  ( "Syntax error at line 4, column 17:\
+   \n'The last token was expected to be a typedef name, but it is a variable name.'\
+   \n(last token: (VARIABLE q), current token: WHILE, state: 425)")
+  |}]
 
 let%expect_test "" =
   Printexc.record_backtrace false;
@@ -64,4 +68,8 @@ typedef int x;
 _Bool _Bool { q while
     |};
   [%expect.unreachable]
-[@@expect.uncaught_exn {| ("Syntax error at line 4, column 11: 'Unknown error' (last token: BOOL, current token: BOOL, state: 388)") |}]
+[@@expect.uncaught_exn {|
+  ( "Syntax error at line 4, column 11:\
+   \n'Unknown error'\
+   \n(last token: BOOL, current token: BOOL, state: 388)")
+  |}]
