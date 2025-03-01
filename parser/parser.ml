@@ -3,10 +3,10 @@
  *)
 
 module Make
-    (Gen : Astgen_intf.S)
+    (Gen : Astgen_intf.S with module Lexing = Lexing)
     (Context : Context.Packed)
 = struct
-  module Raw = Parser_raw.Make (Gen) (Context)
+  module Raw = Parser_raw.Make (Lexing) (Gen) (Context)
 
   type token = Raw.token
 

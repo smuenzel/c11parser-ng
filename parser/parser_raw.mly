@@ -11,7 +11,8 @@
    has 3 reduce/reduce conflicts on RPAREN, LPAREN, and LBRACK. If you
    modify the grammar, you should check that this is still the case. *)
 
-%parameter<Gen : Astgen_intf.S>
+%parameter<Lexing : Lexing_intf.S>
+%parameter<Gen : Astgen_intf.S with module Lexing = Lexing>
 %parameter<Context : Context.Packed>
 
 %token<string> NAME

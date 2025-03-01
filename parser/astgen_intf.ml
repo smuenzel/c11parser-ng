@@ -2,16 +2,20 @@
  * SPDX-FileCopyrightText: (c) 2024-2025 Stefan Muenzel
  *)
 
+(*
 type 'a with_pos = start:Lexing.position -> end_:Lexing.position -> 'a
+   *)
 
 module Literal = C11lexer.Literal
 
 module type S = sig
+  module Lexing : Lexing_intf.S
+
   type 'a rev := 'a list Util.Stored_reversed.t
 
   type 'a located
 
-  val locate : ('a -> 'a located) with_pos
+  val locate : start:Lexing.position -> end_:Lexing.position -> 'a -> 'a located
 
   module Var_name : sig
     type t
