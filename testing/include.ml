@@ -39,4 +39,46 @@ let test_pre_token s =
   ]
   |> print_s
 
+let convert_to_pos tokens =
+  List.map tokens ~f:(fun (pos, token) ->
+      let pos_s =
+        Printf.sprintf "%i:%i-%i:%i"
+          pos.Preprocessor.Pre_token.Token_properties.start.pos_lnum (pos.start.pos_cnum - pos.start.pos_bol)
+          pos.end_.pos_lnum (pos.end_.pos_cnum - pos.end_.pos_bol)
+      in
+      pos_s, token
+    )
+
+let test_pre_token_line s =
+  let lexbuf = Sedlexing.Utf8.from_string s in
+  let line_acc = ref [] in
+  let decode_acc = ref [] in
+  while
+    match Preprocessor.Line_processor.getline lexbuf with
+    | None -> false
+    | Some line ->
+      decode_acc :=
+        (Preprocessor.Line_processor.process_line  line) :: !decode_acc;
+      let line = convert_to_pos line in
+      line_acc := line :: !line_acc; true
+  do
+    ()
+  done;
+  let decode = List.rev !decode_acc in
+  let lines = List.rev !line_acc in
+  let recode =
+    List.map decode
+      ~f:(function
+          | `Unknown -> `Unknown
+          | `If tokens ->
+            ()
+        )
+  in
+  [%message.omit_nil ""
+      ~_:(lines : (string * Preprocessor.Pre_token.t) list list)
+      (decode : 
+         [`If of C11lexer.Token.t list | `Unknown ] list)
+  ]
+  |> print_s
+
 

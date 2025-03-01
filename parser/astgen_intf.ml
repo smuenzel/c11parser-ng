@@ -147,6 +147,9 @@ module type S = sig
     val predecrement : t
     val postincrement : t
     val postdecrement : t
+
+    (* For preprocessor only *)
+    val defined : t
   end
 
   module Constant : sig

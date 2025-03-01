@@ -105,6 +105,7 @@ type t =
   | DOT
   | ATOMIC_LPAREN
   | EOF
+  | DEFINED
 [@@deriving sexp]
 
 type token = t [@@deriving sexp]

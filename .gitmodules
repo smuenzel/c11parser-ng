@@ -1,0 +1,3 @@
+[submodule "vendor/menhir"]
+	path = vendor/menhir
+	url = git@github.com:smuenzel/menhir.git

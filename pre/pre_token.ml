@@ -152,12 +152,29 @@ type t =
   | Identifier of string
   | Preprocessing_number of string
   | Character_constant of C11lexer.Literal.Char.t
-  | String_literal of string
+  | String_literal of C11lexer.Literal.String.t
   | Punctuator of { preceeded_by_whitespace : bool; value : string }
   | Single_char of string
   | Newline
   | Eof
 [@@deriving sexp]
+
+let stringify = function
+  | Header_name (System, name) ->
+    Printf.sprintf "<%s>" name
+  | Header_name (Local, name) ->
+    Printf.sprintf "\"%s\"" name
+  | Preprocessing_number s -> s
+  | Identifier s -> s
+  | Punctuator { preceeded_by_whitespace; value } ->
+    if preceeded_by_whitespace
+    then Printf.sprintf " %s" value
+    else value
+  | Newline -> "\\n"
+  | Eof -> ""
+  | Single_char s -> s
+  | Character_constant _ | String_literal _ -> assert false
+
 
 type token = t
 
@@ -245,6 +262,12 @@ let rec next_token ~has_whitespace ~(produce : ?start_pos:_ -> _ -> _) lexbuf =
     let excess_elements = C11lexer.char_literal_end lexbuf in
     produce ~start_pos lexbuf
       (Character_constant { kind; value = element :: excess_elements })
+  | (Chars "LuU" | "" | "u8"), "\"" ->
+    let start_pos = Sedlexing.lexing_position_start lexbuf in
+    let kind = C11lexer.literal_string_prefix lexbuf in
+    let value = C11lexer.string_literal lexbuf in
+    produce ~start_pos lexbuf
+      (String_literal [ { kind; value } ])
   | identifier -> produce lexbuf (Identifier (c lexbuf))
   | preprocessing_number -> produce lexbuf (Preprocessing_number (c lexbuf))
   | header_name_h -> produce lexbuf (Header_name (System, cn lexbuf 1 (-1)))

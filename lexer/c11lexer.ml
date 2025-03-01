@@ -180,6 +180,7 @@ let rec initial lexbuf : Token.t =
     let excess_elements = char_literal_end lexbuf in
     CONSTANT_CHAR { kind; value = element :: excess_elements }
   | (Chars "LuU" | "" | "u8"), "\"" ->
+    (* CR smuenzel: check token positions *)
     let kind = literal_string_prefix lexbuf in
     let value = string_literal lexbuf in
     STRING_LITERAL [ { kind; value } ]

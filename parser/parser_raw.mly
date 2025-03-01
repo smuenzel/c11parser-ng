@@ -70,6 +70,9 @@
 %token VOLATILE "volatile"
 %token WHILE "while"
 
+(* For preprocessor only *)
+%token DEFINED "defined"
+
 %token ELLIPSIS "..."
 %token ADD_ASSIGN "+="
 %token SUB_ASSIGN "-="
@@ -341,6 +344,8 @@ let unary_expression :=
 { Gen.Expr.unary (Gen.Unary_operator.sizeof, e) }
 | "sizeof"; "("; ~=type_name; ")";
 < Gen.Expr.sizeof >
+| "defined"; e=located(unary_expression);
+{ Gen.Expr.unary (Gen.Unary_operator.defined, e) }
 | "_Alignof"; "("; ~=type_name; ")";
 < Gen.Expr.alignof >
 

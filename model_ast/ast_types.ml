@@ -144,6 +144,7 @@ module Unary_operator = struct
     | Logical_not
     | Bitwise_not
     | Sizeof
+    | Defined
     | Preincrement
     | Predecrement
     | Postincrement

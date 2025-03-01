@@ -27,17 +27,22 @@ let%expect_test ""=
     |}]
 
 let%expect_test ""=
-  test_pre_token
+  test_pre_token_line
     {|#if 'z' - 'a' == 25
     |};
   [%expect {|
-    ((1:0-1:1 (Punctuator (preceeded_by_whitespace false) (value #)))
-     (1:1-1:3 (Identifier if))
-     (1:4-1:7 (Character_constant ((kind Plain) (value ((Plain z))))))
-     (1:8-1:9 (Punctuator (preceeded_by_whitespace true) (value -)))
-     (1:10-1:13 (Character_constant ((kind Plain) (value ((Plain a))))))
-     (1:14-1:16 (Punctuator (preceeded_by_whitespace true) (value ==)))
-     (1:17-1:19 (Preprocessing_number 25)) (1:19-2:0 Newline) (2:4-2:4 Eof))
+    ((((1:0-1:1 (Punctuator (preceeded_by_whitespace false) (value #)))
+       (1:1-1:3 (Identifier if))
+       (1:4-1:7 (Character_constant ((kind Plain) (value ((Plain z))))))
+       (1:8-1:9 (Punctuator (preceeded_by_whitespace true) (value -)))
+       (1:10-1:13 (Character_constant ((kind Plain) (value ((Plain a))))))
+       (1:14-1:16 (Punctuator (preceeded_by_whitespace true) (value ==)))
+       (1:17-1:19 (Preprocessing_number 25))))
+     (decode
+      ((If
+        ((CONSTANT_CHAR ((kind Plain) (value ((Plain z))))) MINUS
+         (CONSTANT_CHAR ((kind Plain) (value ((Plain a))))) EQEQ
+         (CONSTANT_INTEGER 25))))))
     |}]
 
 let%expect_test ""=
@@ -165,3 +170,10 @@ let%expect_test ""=
      (2:4-2:5 (Punctuator (preceeded_by_whitespace true) (value #)))
      (2:5-3:0 Newline) (3:4-3:4 Eof))
     |}]
+
+let%expect_test ""=
+  test_pre_token
+    {|
+    @
+    |};
+  [%expect {| ((1:0-2:0 Newline) (2:4-2:5 (Single_char @)) (2:5-3:0 Newline) (3:4-3:4 Eof)) |}]
