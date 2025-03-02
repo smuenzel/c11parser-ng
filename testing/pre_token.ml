@@ -54,6 +54,51 @@ let%expect_test ""=
     |}]
 
 let%expect_test ""=
+  test_pre_token_line
+    {|#if 'z' && defined(v)
+    |};
+  [%expect {|
+    ((((1:0-1:1 (Punctuator (preceeded_by_whitespace false) (value #)))
+       (1:1-1:3 (Identifier if))
+       (1:4-1:7 (Character_constant ((kind Plain) (value ((Plain z))))))
+       (1:8-1:10 (Punctuator (preceeded_by_whitespace true) (value &&)))
+       (1:11-1:18 (Identifier defined))
+       (1:18-1:19 (Punctuator (preceeded_by_whitespace false) (value "(")))
+       (1:19-1:20 (Identifier v))
+       (1:20-1:21 (Punctuator (preceeded_by_whitespace false) (value ")")))))
+     (decode
+      ((If
+        ((CONSTANT_CHAR ((kind Plain) (value ((Plain z))))) ANDAND DEFINED LPAREN
+         (NAME v) RPAREN))))
+     (recode
+      ((If
+        (Binary (operator (Logical Logical_and))
+         (left (Constant (Char ((kind Plain) (value ((Plain U+007A)))))))
+         (right (Unary (operator Defined) (operand (Var v)))))))))
+    |}]
+
+let%expect_test ""=
+  test_pre_token_line
+    {|#if 'z' && defined v
+    |};
+  [%expect {|
+    ((((1:0-1:1 (Punctuator (preceeded_by_whitespace false) (value #)))
+       (1:1-1:3 (Identifier if))
+       (1:4-1:7 (Character_constant ((kind Plain) (value ((Plain z))))))
+       (1:8-1:10 (Punctuator (preceeded_by_whitespace true) (value &&)))
+       (1:11-1:18 (Identifier defined)) (1:19-1:20 (Identifier v))))
+     (decode
+      ((If
+        ((CONSTANT_CHAR ((kind Plain) (value ((Plain z))))) ANDAND DEFINED
+         (NAME v)))))
+     (recode
+      ((If
+        (Binary (operator (Logical Logical_and))
+         (left (Constant (Char ((kind Plain) (value ((Plain U+007A)))))))
+         (right (Unary (operator Defined) (operand (Var v)))))))))
+    |}]
+
+let%expect_test ""=
   test_pre_token
     {|#include <stdio.h>
       #include "myprog.h"

@@ -416,7 +416,7 @@ module State = struct
     fun lexbuf -> lexer t lexbuf
 end
 
-let lexer (state : State.t) (lexbuf : Sedlexing.lexbuf) : Token.t =
+let wrap_lexer ~lexer (state : State.t) lexbuf : Token.t =
   match state.kind with
   | Ident id ->
     state.kind <- Regular;
@@ -424,7 +424,7 @@ let lexer (state : State.t) (lexbuf : Sedlexing.lexbuf) : Token.t =
   | Atomic
   | Regular ->
     let token = lexer lexbuf in
-    match state.kind, token with
+    match state.kind, (token : Token.t) with
     | _, NAME id ->
       state.kind <- Ident id;
       token
@@ -440,3 +440,6 @@ let lexer (state : State.t) (lexbuf : Sedlexing.lexbuf) : Token.t =
     | _, _ ->
       state.kind <- Regular;
       token
+
+let lexer (state : State.t) lexbuf : Token.t =
+  wrap_lexer ~lexer state lexbuf

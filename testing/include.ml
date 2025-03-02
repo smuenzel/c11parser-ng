@@ -60,7 +60,21 @@ let expression_from_tokens (l : C11lexer.Token.t list) =
   let context = C11parser.Context.create_packed () in
   let module Raw = C11parser.Parser_raw.Make(Lex)(Ast) (val context) in
   let lexbuf = Lex.create l in
-  Raw.single_expression Lex.lexer lexbuf
+  let state = C11lexer.State.create_default () in
+  let lexer = C11lexer.wrap_lexer ~lexer:Lex.lexer state in
+  try
+    Raw.single_expression lexer lexbuf
+  with
+  | Raw.Error e ->
+    let msg =
+      try C11parser.Error_messages.message e
+      with
+      | _ -> "Unknown error"
+    in
+    raise_s [%message "error"
+        (e : int)
+        (msg : string)
+    ]
 
 let test_pre_token_line s =
   let lexbuf = Sedlexing.Utf8.from_string s in
@@ -84,7 +98,11 @@ let test_pre_token_line s =
       ~f:(function
           | `Unknown -> `Unknown
           | `If tokens ->
+            try
             `If (expression_from_tokens tokens)
+            with
+            | exn -> `Exn exn
+
         )
   in
   [%message.omit_nil ""
@@ -92,7 +110,7 @@ let test_pre_token_line s =
       (decode : 
          [`If of C11lexer.Token.t list | `Unknown ] list)
       (recode : 
-         [`If of No_pos.Ast.Expr.t | `Unknown ] list)
+         [`If of No_pos.Ast.Expr.t | `Unknown | `Exn of Exn.t] list)
   ]
   |> print_s
 

@@ -53,6 +53,8 @@ let convert_token token : [`T of C11lexer.Token.t | `S of string ] list =
     [ `T (CONSTANT_CHAR c) ]
   | String_literal s ->
     [ `T (STRING_LITERAL s) ]
+  | Identifier "defined" ->
+    [ `T DEFINED ]
   | Header_name _
   | Preprocessing_number _
   | Punctuator _
