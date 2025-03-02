@@ -49,6 +49,19 @@ let convert_to_pos tokens =
       pos_s, token
     )
 
+module No_pos = struct
+    module Lex = C11parser.Lexing_adapters.From_list(C11lexer.Token)
+    module Located = Model_ast.Ast_types.Dummy_located_raw(struct type t = unit end)
+    module Ast = Model_ast.Ast.Make(Located)
+end
+
+let expression_from_tokens (l : C11lexer.Token.t list) =
+  let open No_pos in
+  let context = C11parser.Context.create_packed () in
+  let module Raw = C11parser.Parser_raw.Make(Lex)(Ast) (val context) in
+  let lexbuf = Lex.create l in
+  Raw.single_expression Lex.lexer lexbuf
+
 let test_pre_token_line s =
   let lexbuf = Sedlexing.Utf8.from_string s in
   let line_acc = ref [] in
@@ -58,7 +71,7 @@ let test_pre_token_line s =
     | None -> false
     | Some line ->
       decode_acc :=
-        (Preprocessor.Line_processor.process_line  line) :: !decode_acc;
+        (Preprocessor.Line_processor.process_line line) :: !decode_acc;
       let line = convert_to_pos line in
       line_acc := line :: !line_acc; true
   do
@@ -71,13 +84,15 @@ let test_pre_token_line s =
       ~f:(function
           | `Unknown -> `Unknown
           | `If tokens ->
-            ()
+            `If (expression_from_tokens tokens)
         )
   in
   [%message.omit_nil ""
       ~_:(lines : (string * Preprocessor.Pre_token.t) list list)
       (decode : 
          [`If of C11lexer.Token.t list | `Unknown ] list)
+      (recode : 
+         [`If of No_pos.Ast.Expr.t | `Unknown ] list)
   ]
   |> print_s
 

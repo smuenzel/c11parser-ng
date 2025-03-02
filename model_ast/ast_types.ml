@@ -7,15 +7,21 @@ open Core
 
 module type Located = sig
   type 'a t [@@deriving sexp, compare, hash]
-  type position = Lexing.position
+  type position
   val locate : start:position -> end_:position -> 'a -> 'a t
 end
 
-module Dummy_located = struct
+module type T = sig
+  type t
+end
+
+module Dummy_located_raw(Position : T) = struct
   type 'a t = 'a [@@deriving sexp, compare, hash]
-  type position = Lexing.position
+  type position = Position.t
   let locate ~start:_ ~end_:_ x = x
 end
+
+module Dummy_located = Dummy_located_raw(struct type t = Lexing.position end)
 
 module Var_name = String_id.Make(struct let module_name = "Var_name" end)()
 module Typedef_name = String_id.Make(struct let module_name = "Typedef_name" end)()

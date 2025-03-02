@@ -109,3 +109,5 @@ type t =
 [@@deriving sexp]
 
 type token = t [@@deriving sexp]
+
+let eof = EOF

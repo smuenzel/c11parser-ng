@@ -42,7 +42,15 @@ let%expect_test ""=
       ((If
         ((CONSTANT_CHAR ((kind Plain) (value ((Plain z))))) MINUS
          (CONSTANT_CHAR ((kind Plain) (value ((Plain a))))) EQEQ
-         (CONSTANT_INTEGER 25))))))
+         (CONSTANT_INTEGER 25)))))
+     (recode
+      ((If
+        (Binary (operator (Equality Equal))
+         (left
+          (Binary (operator (Additive Minus))
+           (left (Constant (Char ((kind Plain) (value ((Plain U+007A)))))))
+           (right (Constant (Char ((kind Plain) (value ((Plain U+0061)))))))))
+         (right (Constant (Integer 25))))))))
     |}]
 
 let%expect_test ""=
