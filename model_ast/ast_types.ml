@@ -7,11 +7,13 @@ open Core
 
 module type Located = sig
   type 'a t [@@deriving sexp, compare, hash]
-  val locate : start:Lexing.position -> end_:Lexing.position -> 'a -> 'a t
+  type position = Lexing.position
+  val locate : start:position -> end_:position -> 'a -> 'a t
 end
 
 module Dummy_located = struct
   type 'a t = 'a [@@deriving sexp, compare, hash]
+  type position = Lexing.position
   let locate ~start:_ ~end_:_ x = x
 end
 
@@ -215,6 +217,7 @@ end
 
 module Make(L : Located) = struct
   type 'a located = 'a L.t [@@deriving sexp, compare, hash]
+  type position = L.position
   let locate = L.locate
 
   module Var_name = Var_name

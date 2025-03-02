@@ -7,9 +7,8 @@ module type Located = Ast_types.Located
 module Make(L : Located) = struct
   module T = Ast_types.Make(L)
 
-  module Lexing = Lexing
-
   type 'a located = 'a T.located [@@deriving sexp, compare, hash]
+  type position = T.position
   let locate = T.locate
 
   module Var_name = T.Var_name

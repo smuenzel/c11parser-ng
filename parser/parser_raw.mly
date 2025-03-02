@@ -12,7 +12,7 @@
    modify the grammar, you should check that this is still the case. *)
 
 %parameter<Lexing : Lexing_intf.S>
-%parameter<Gen : Astgen_intf.S with module Lexing = Lexing>
+%parameter<Gen : Astgen_intf.S with type position = Lexing.position>
 %parameter<Context : Context.Packed>
 
 %token<string> NAME

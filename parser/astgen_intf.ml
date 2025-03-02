@@ -9,13 +9,12 @@ type 'a with_pos = start:Lexing.position -> end_:Lexing.position -> 'a
 module Literal = C11lexer.Literal
 
 module type S = sig
-  module Lexing : Lexing_intf.S
-
   type 'a rev := 'a list Util.Stored_reversed.t
 
   type 'a located
 
-  val locate : start:Lexing.position -> end_:Lexing.position -> 'a -> 'a located
+  type position
+  val locate : start:position -> end_:position -> 'a -> 'a located
 
   module Var_name : sig
     type t
