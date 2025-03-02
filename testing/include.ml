@@ -50,9 +50,9 @@ let convert_to_pos tokens =
     )
 
 module No_pos = struct
-    module Lex = C11parser.Lexing_adapters.From_list(C11lexer.Token)
-    module Located = Model_ast.Ast_types.Dummy_located_raw(struct type t = unit end)
-    module Ast = Model_ast.Ast.Make(Located)
+  module Lex = C11parser.Lexing_adapters.From_list(C11lexer.Token)
+  module Located = Model_ast.Ast_types.Dummy_located_raw(struct type t = unit end)
+  module Ast = Model_ast.Ast.Make(Located)
 end
 
 let expression_from_tokens (l : C11lexer.Token.t list) =
@@ -99,10 +99,9 @@ let test_pre_token_line s =
           | `Unknown -> `Unknown
           | `If tokens ->
             try
-            `If (expression_from_tokens tokens)
+              `If (expression_from_tokens tokens)
             with
             | exn -> `Exn exn
-
         )
   in
   [%message.omit_nil ""

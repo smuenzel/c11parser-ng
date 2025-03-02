@@ -12,7 +12,7 @@
    modify the grammar, you should check that this is still the case. *)
 
 %parameter<Lexing : Lexing_intf.S>
-%parameter<Gen : Astgen_intf.S with type position = Lexing.position>
+%parameter<Gen : Astgen_intf.S with type Located.position = Lexing.position>
 %parameter<Context : Context.Packed>
 
 %token<string> NAME
@@ -167,7 +167,7 @@
 (* Helpers *)
 
 %public %inline located(X):
-  x=X { Gen.locate ~start:$startpos(x) ~end_:$endpos(x) x }
+  x=X { Gen.Located.locate ~start:$startpos(x) ~end_:$endpos(x) x }
 
 %inline get_context(X):
   x=X { fst x }

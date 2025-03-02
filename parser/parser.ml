@@ -3,7 +3,7 @@
  *)
 
 module Make
-    (Gen : Astgen_intf.S with type position = Lexing.position)
+    (Gen : Astgen_intf.S with type Located.position = Lexing.position)
     (Context : Context.Packed)
 = struct
   module Raw = Parser_raw.Make (Lexing) (Gen) (Context)

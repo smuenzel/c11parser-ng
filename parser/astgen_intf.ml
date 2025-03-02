@@ -11,10 +11,11 @@ module Literal = C11lexer.Literal
 module type S = sig
   type 'a rev := 'a list Util.Stored_reversed.t
 
-  type 'a located
-
-  type position
-  val locate : start:position -> end_:position -> 'a -> 'a located
+  module Located : sig
+    type 'a t
+    type position
+    val locate : start:position -> end_:position -> 'a -> 'a t
+  end
 
   module Var_name : sig
     type t
@@ -168,7 +169,7 @@ module type S = sig
   module rec Enum_constant : sig
     type t
 
-    val named : ?value:Expr.t located -> General_identifier.t -> t
+    val named : ?value:Expr.t Located.t -> General_identifier.t -> t
   end
 
   and Enum : sig
@@ -199,14 +200,14 @@ module type S = sig
   and Generic_association : sig
     type t
 
-    val default : Expr.t located -> t
-    val type_name : Type_name.t * Expr.t located -> t
+    val default : Expr.t Located.t -> t
+    val type_name : Type_name.t * Expr.t Located.t -> t
   end
 
   and Generic_selection : sig
     type t
 
-    val make : Expr.t located * Generic_association.t rev -> t
+    val make : Expr.t Located.t * Generic_association.t rev -> t
   end
 
   and Struct_initializer : sig
@@ -217,7 +218,7 @@ module type S = sig
 
   and Expr : sig
     type t
-    type t' := t located
+    type t' := t Located.t
     type 'op binary := t' * 'op * t' -> t
     type 'op unary := 'op * t' -> t
 
@@ -251,7 +252,7 @@ module type S = sig
   and Alignment_specifier : sig
     type t
     val alignas_type : Type_name.t -> t
-    val alignas_expression : Expr.t located -> t
+    val alignas_expression : Expr.t Located.t -> t
   end
 
   and Specifier_qualifier_list : sig
@@ -309,8 +310,8 @@ module type S = sig
 
     type type_qualifier_list := Type_qualifier.t rev option
 
-    val array : (t * type_qualifier_list * Expr.t located option) -> t 
-    val static_array : (t * type_qualifier_list* Expr.t located) -> t
+    val array : (t * type_qualifier_list * Expr.t Located.t option) -> t 
+    val static_array : (t * type_qualifier_list* Expr.t Located.t) -> t
     val unspecified_size_variable_array : (t * type_qualifier_list) -> t
 
     val function_ : t * (Parameter_type_list.t, Var_name.t list option) Either.t -> t
@@ -328,8 +329,8 @@ module type S = sig
 
     val abstract : Abstract_declarator.t -> t
 
-    val array : t option * Type_qualifier.t rev option * Expr.t located option -> t
-    val static_array : t option * Type_qualifier.t rev option * Expr.t located -> t
+    val array : t option * Type_qualifier.t rev option * Expr.t Located.t option -> t
+    val static_array : t option * Type_qualifier.t rev option * Expr.t Located.t -> t
     val unspecified_size_variable_array : t option -> t
     val function_ : t option * Parameter_type_list.t option -> t
   end
@@ -351,7 +352,7 @@ module type S = sig
     type t
 
     val declarator : Declarator.t -> t
-    val bit_field : (Declarator.t option * Expr.t located) -> t
+    val bit_field : (Declarator.t option * Expr.t Located.t) -> t
   end
 
   and Struct_declaration : sig
@@ -370,30 +371,30 @@ module type S = sig
 
   and Expression_statement : sig
     type t
-    val make : Expr.t located option -> t
+    val make : Expr.t Located.t option -> t
   end
 
   and Selection_statement : sig
     type t
-    val if_else : (Expr.t located * Statement.t located * Statement.t located) -> t
-    val if_ : (Expr.t located * Statement.t located) -> t
-    val switch : (Expr.t located * Statement.t located) -> t
+    val if_else : (Expr.t Located.t * Statement.t Located.t * Statement.t Located.t) -> t
+    val if_ : (Expr.t Located.t * Statement.t Located.t) -> t
+    val switch : (Expr.t Located.t * Statement.t Located.t) -> t
   end
 
   and Labeled_statement : sig
     type t
 
-    val label : (General_identifier.t * Statement.t located) -> t
-    val case : (Expr.t located * Statement.t located) -> t
-    val default : Statement.t located -> t
+    val label : (General_identifier.t * Statement.t Located.t) -> t
+    val case : (Expr.t Located.t * Statement.t Located.t) -> t
+    val default : Statement.t Located.t -> t
   end
 
   and Iteration_statement : sig
     type t
-    val while_ : (Expr.t located * Statement.t located) -> t
-    val do_ : (Statement.t located * Expr.t located) -> t
-    val for_expr : (Expr.t located option * Expr.t located option * Expr.t located option * Statement.t located) -> t
-    val for_decl : (Declaration.t located * Expr.t located option * Expr.t located option * Statement.t located) -> t
+    val while_ : (Expr.t Located.t * Statement.t Located.t) -> t
+    val do_ : (Statement.t Located.t * Expr.t Located.t) -> t
+    val for_expr : (Expr.t Located.t option * Expr.t Located.t option * Expr.t Located.t option * Statement.t Located.t) -> t
+    val for_decl : (Declaration.t Located.t * Expr.t Located.t option * Expr.t Located.t option * Statement.t Located.t) -> t
   end
 
   and Jump_statement : sig
@@ -401,13 +402,13 @@ module type S = sig
     val goto : General_identifier.t -> t
     val continue : unit -> t
     val break : unit -> t
-    val return : Expr.t located option -> t
+    val return : Expr.t Located.t option -> t
   end
 
   and Block_item : sig
     type t
-    val statement : Statement.t located -> t
-    val declaration : Declaration.t located -> t
+    val statement : Statement.t Located.t -> t
+    val declaration : Declaration.t Located.t -> t
   end
 
   and Statement : sig
@@ -436,13 +437,13 @@ module type S = sig
 
   and Static_assert_declaration : sig
     type t
-    val make : Expr.t located * C11lexer.Literal.String.t -> t
+    val make : Expr.t Located.t * C11lexer.Literal.String.t -> t
   end
 
   and C_initializer : sig
     type t
 
-    val expression : Expr.t located -> t
+    val expression : Expr.t Located.t -> t
     val initializer_list : (Designator.t rev option * C_initializer.t) rev -> t
 
   end
@@ -450,7 +451,7 @@ module type S = sig
   and Designator : sig
     type t
     val field : General_identifier.t -> t
-    val subscript : Expr.t located -> t
+    val subscript : Expr.t Located.t -> t
   end
 
   and Function_definition : sig

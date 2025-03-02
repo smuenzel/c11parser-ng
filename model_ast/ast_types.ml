@@ -9,6 +9,7 @@ module type Located = sig
   type 'a t [@@deriving sexp, compare, hash]
   type position
   val locate : start:position -> end_:position -> 'a -> 'a t
+  val extract : 'a t -> 'a
 end
 
 module type T = sig
@@ -19,6 +20,7 @@ module Dummy_located_raw(Position : T) = struct
   type 'a t = 'a [@@deriving sexp, compare, hash]
   type position = Position.t
   let locate ~start:_ ~end_:_ x = x
+  let extract x = x
 end
 
 module Dummy_located = Dummy_located_raw(struct type t = Lexing.position end)
@@ -222,9 +224,7 @@ module Constant = struct
 end
 
 module Make(L : Located) = struct
-  type 'a located = 'a L.t [@@deriving sexp, compare, hash]
-  type position = L.position
-  let locate = L.locate
+  module Located = L
 
   module Var_name = Var_name
   module Typedef_name = Typedef_name
@@ -250,7 +250,7 @@ module Make(L : Located) = struct
   module%gen rec Enum_constant : sig
     type t =
       { name : General_identifier.t
-      ; value : Expr.t located option
+      ; value : Expr.t Located.t option
       } [@@deriving sexp, compare, hash]
   end = Enum_constant
 
@@ -287,14 +287,14 @@ module Make(L : Located) = struct
 
   and Generic_association : sig
     type t =
-      | Default of Expr.t located
-      | Named of { name : Type_name.t; value : Expr.t located }
+      | Default of Expr.t Located.t
+      | Named of { name : Type_name.t; value : Expr.t Located.t }
     [@@deriving sexp, compare, hash, variants]
   end = Generic_association
 
   and Generic_selection : sig
     type t =
-      { discriminant : Expr.t located
+      { discriminant : Expr.t Located.t
       ; associations : Generic_association.t list
       } [@@deriving sexp, compare, hash]
   end = Generic_selection
@@ -315,47 +315,47 @@ module Make(L : Located) = struct
     type t =
       | Binary of
           { operator : Binary_operator.t
-          ; left : t located
-          ; right : t located
+          ; left : t Located.t
+          ; right : t Located.t
           }
       | Unary of 
           { operator : Unary_operator.t
-          ; operand : t located
+          ; operand : t Located.t
           }
       | Question of 
-          { condition : t located
-          ; if_true : t located
-          ; if_false : t located
+          { condition : t Located.t
+          ; if_true : t Located.t
+          ; if_false : t Located.t
           }
       | Cast of
           { type_name : Type_name.t
-          ; operand : t located
+          ; operand : t Located.t
           }
       | Sizeof of Type_name.t
       | Alignof of Type_name.t
       | Dot of 
-          { receiver : t located
+          { receiver : t Located.t
           ; field : General_identifier.t
           }
       | Arrow of 
-          { receiver : t located
+          { receiver : t Located.t
           ; field : General_identifier.t
           }
       | Var of Var_name.t
       | Constant of Constant.t
 
       | Array_subscript of 
-          { array : t located
-          ; index : t located
+          { array : t Located.t
+          ; index : t Located.t
           }
       | Function_call of
-          { callee : t located
-          ; arguments : t located list
+          { callee : t Located.t
+          ; arguments : t Located.t list
           }
 
       | Generic of Generic_selection.t
 
-      | Comma of t located * t located
+      | Comma of t Located.t * t Located.t
       | Struct_initializer of Struct_initializer.t
     [@@deriving sexp, compare, hash, variants]
   end = Expr
@@ -363,7 +363,7 @@ module Make(L : Located) = struct
   and Alignment_specifier : sig
     type t =
       | Type of Type_name.t
-      | Expr of Expr.t located
+      | Expr of Expr.t Located.t
     [@@deriving sexp, compare, hash, variants]
   end = Alignment_specifier
 
@@ -433,12 +433,12 @@ module Make(L : Located) = struct
       | Array of 
           { declarator : t
           ; qualifiers : Type_qualifier.t list
-          ; size : Expr.t located option
+          ; size : Expr.t Located.t option
           }
       | Static_array of 
           { declarator : t
           ; qualifiers : Type_qualifier.t list
-          ; size : Expr.t located
+          ; size : Expr.t Located.t
           }
       | Unspecified_size_variable_array of
           { declarator : t
@@ -468,12 +468,12 @@ module Make(L : Located) = struct
       | Array of 
           { declarator : t option
           ; qualifiers : Type_qualifier.t list
-          ; size : Expr.t located option
+          ; size : Expr.t Located.t option
           }
       | Static_array of
           { declarator : t option
           ; qualifiers : Type_qualifier.t list
-          ; size : Expr.t located
+          ; size : Expr.t Located.t
           }
       | Unspecified_size_variable_array of t option
       | Function of
@@ -508,7 +508,7 @@ module Make(L : Located) = struct
       | Declarator of Declarator.t
       | Bit_field of
           { declarator : Declarator.t option
-          ; size : Expr.t located
+          ; size : Expr.t Located.t
           }
     [@@deriving sexp, compare, hash, variants]
   end = Struct_declarator
@@ -529,20 +529,20 @@ module Make(L : Located) = struct
   end = Compound_statement
 
   and Expression_statement : sig
-    type t = Expr.t located option
+    type t = Expr.t Located.t option
     [@@deriving sexp, compare, hash]
   end = Expression_statement
 
   and Selection_statement : sig
     type t = 
       | If of
-          { condition : Expr.t located
-          ; then_ : Statement.t located
-          ; else_ : Statement.t located option
+          { condition : Expr.t Located.t
+          ; then_ : Statement.t Located.t
+          ; else_ : Statement.t Located.t option
           }
       | Switch of
-          { condition : Expr.t located
-          ; body : Statement.t located
+          { condition : Expr.t Located.t
+          ; body : Statement.t Located.t
           }
     [@@deriving sexp, compare, hash]
   end = Selection_statement
@@ -551,14 +551,14 @@ module Make(L : Located) = struct
     type t =
       | Label of
           { name : General_identifier.t
-          ; statement : Statement.t located
+          ; statement : Statement.t Located.t
           }
       | Case of 
-          { expression : Expr.t located
-          ; statement : Statement.t located
+          { expression : Expr.t Located.t
+          ; statement : Statement.t Located.t
           }
       | Default of
-          { statement : Statement.t located
+          { statement : Statement.t Located.t
           }
     [@@deriving sexp, compare, hash, variants]
   end = Labeled_statement
@@ -566,24 +566,24 @@ module Make(L : Located) = struct
   and Iteration_statement : sig
     type t =
       | While of 
-          { condition : Expr.t located
-          ; body : Statement.t located
+          { condition : Expr.t Located.t
+          ; body : Statement.t Located.t
           }
       | Do of
-          { condition : Expr.t located
-          ; body : Statement.t located
+          { condition : Expr.t Located.t
+          ; body : Statement.t Located.t
           }
       | For_expr of
-          { init : Expr.t located option
-          ; condition : Expr.t located option
-          ; increment : Expr.t located option
-          ; body : Statement.t located
+          { init : Expr.t Located.t option
+          ; condition : Expr.t Located.t option
+          ; increment : Expr.t Located.t option
+          ; body : Statement.t Located.t
           }
       | For_decl of
-          { declarator : Declaration.t located
-          ; condition : Expr.t located option
-          ; increment : Expr.t located option
-          ; body : Statement.t located
+          { declarator : Declaration.t Located.t
+          ; condition : Expr.t Located.t option
+          ; increment : Expr.t Located.t option
+          ; body : Statement.t Located.t
           }
     [@@deriving sexp, compare, hash, variants]
   end = Iteration_statement
@@ -592,15 +592,15 @@ module Make(L : Located) = struct
     type t =
       | Break
       | Continue
-      | Return of Expr.t located option
+      | Return of Expr.t Located.t option
       | Goto of General_identifier.t
     [@@deriving sexp, compare, hash, variants]
   end = Jump_statement
 
   and Block_item : sig
     type t =
-      | Declaration of Declaration.t located
-      | Statement of Statement.t located
+      | Declaration of Declaration.t Located.t
+      | Statement of Statement.t Located.t
     [@@deriving sexp, compare, hash, variants]
   end = Block_item
 
@@ -638,14 +638,14 @@ module Make(L : Located) = struct
 
   and Static_assert_declaration : sig
     type t =
-      { condition : Expr.t located
+      { condition : Expr.t Located.t
       ; message : Literal.String.t
       } [@@deriving sexp, compare, hash]
   end = Static_assert_declaration
 
   and C_initializer : sig
     type t =
-      | Expression of Expr.t located
+      | Expression of Expr.t Located.t
       | Initializer_list of (Designator.t list * C_initializer.t) list
     [@@deriving sexp, compare, hash]
   end = C_initializer
@@ -660,7 +660,7 @@ module Make(L : Located) = struct
   and Designator : sig
     type t =
       | Field of General_identifier.t
-      | Subscript of Expr.t located
+      | Subscript of Expr.t Located.t
     [@@deriving sexp, compare, hash, variants]
   end = Designator
 
