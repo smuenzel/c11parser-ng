@@ -1,24 +1,7 @@
 open Sexplib0.Sexp_conv
 (* Should be added to sedlex *)
 
-let sedlexing_next_f1 lexbuf ~on_some ~on_none param =
-  let ui = Sedlexing.__private__next_int lexbuf in
-  if ui == -1
-  then on_none param
-  else on_some param (Uchar.unsafe_of_int ui)
-
-let [@inline always] sedlexing_next_f2 lexbuf ~on_some ~on_none p1 p2 =
-  let ui = Sedlexing.__private__next_int lexbuf in
-  if ui == -1
-  then on_none p1 p2
-  else on_some p1 p2 (Uchar.unsafe_of_int ui)
-
-let [@inline always] sedlexing_next_f3 lexbuf ~on_some ~on_none p1 p2 p3 =
-  let ui = Sedlexing.__private__next_int lexbuf in
-  if ui == -1
-  then on_none p1 p2 p3
-  else on_some p1 p2 p3 (Uchar.unsafe_of_int ui)
-
+module Sedlexing = C11lexer.Sedlexing
 
 let backslash = Uchar.of_char '\\'
 let newline = Uchar.of_char '\n'
@@ -65,7 +48,7 @@ module Process_line_escape = struct
       end;
       while (t.pos < t.max_pos)
             &&
-            (sedlexing_next_f2 inner_lexbuf
+            (Sedlexing.next_f2 inner_lexbuf
                ~on_some:(fun t a uchar ->
                    match t.state
                        , Uchar.equal uchar backslash
@@ -239,18 +222,13 @@ let cn lexbuf a b =
   let len = if b < 0 then Sedlexing.lexeme_length lexbuf + b - a else b - a in
   Sedlexing.Utf8.sub_lexeme lexbuf a len
 
-let produce_with_position ?start_pos lexbuf token =
+let produce_with_position lexbuf token =
   let start, end_ = Sedlexing.lexing_positions lexbuf in
-  let start =
-    match start_pos with
-    | Some start_pos -> start_pos
-    | None -> start
-  in
   Token_properties.{ start; end_ }, token
 
-let produce_plain ?start_pos:_ _ token = token
+let produce_plain _ token = token
 
-let rec next_token ~has_whitespace ~(produce : ?start_pos:_ -> _ -> _) lexbuf =
+let rec next_token ~has_whitespace ~produce lexbuf =
   match%sedlex lexbuf with
   | "//", Star (Compl '\n'), '\n' -> produce lexbuf Newline
   | "//", Star (Compl '\n'), eof -> produce lexbuf Eof
@@ -260,13 +238,15 @@ let rec next_token ~has_whitespace ~(produce : ?start_pos:_ -> _ -> _) lexbuf =
     let kind = C11lexer.literal_char_prefix lexbuf in
     let element = C11lexer.char lexbuf in
     let excess_elements = C11lexer.char_literal_end lexbuf in
-    produce ~start_pos lexbuf
+    Sedlexing.override_start_position lexbuf start_pos;
+    produce lexbuf
       (Character_constant { kind; value = element :: excess_elements })
   | (Chars "LuU" | "" | "u8"), "\"" ->
     let start_pos = Sedlexing.lexing_position_start lexbuf in
     let kind = C11lexer.literal_string_prefix lexbuf in
     let value = C11lexer.string_literal lexbuf in
-    produce ~start_pos lexbuf
+    Sedlexing.override_start_position lexbuf start_pos;
+    produce lexbuf
       (String_literal [ { kind; value } ])
   | identifier -> produce lexbuf (Identifier (c lexbuf))
   | preprocessing_number -> produce lexbuf (Preprocessing_number (c lexbuf))

@@ -46,7 +46,8 @@ module Make
     Printexc.register_printer syntax_error_printer
 
   let wrap f =
-    fun (lexbuf : Sedlexing.lexbuf) ->
+    fun (lexbuf : C11lexer.Sedlexing.lexbuf) ->
+    let module Sedlexing = C11lexer.Sedlexing in
     let state =
       C11lexer.State.create_default
         ~is_typedefname:Context.is_typedefname

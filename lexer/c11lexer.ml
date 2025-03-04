@@ -9,6 +9,86 @@
 module Token = Token
 module Literal = Literal
 
+module Sedlexing = struct
+  module T = Sedlexing
+
+  type lexbuf = 
+    { sedlexing: T.lexbuf
+    ; mutable override_start_position : Lexing.position option
+    }
+
+  let create f = 
+    { sedlexing = Sedlexing.create f
+    ; override_start_position = None
+    }
+
+  let set_filename t f = T.set_filename t.sedlexing f
+
+  let override_start_position t pos =
+    t.override_start_position <- Some pos
+
+  let start t =
+    t.override_start_position <- None;
+    T.start t.sedlexing
+
+  let __private__next_int t = T.__private__next_int t.sedlexing
+  let backtrack t = T.backtrack t.sedlexing
+  let mark t = T.mark t.sedlexing
+
+  let lexing_position_start t =
+    match t.override_start_position with
+    | Some p -> p
+    | None ->
+      T.lexing_position_start t.sedlexing
+
+  let lexing_position_curr t = T.lexing_position_curr t.sedlexing
+
+  let lexing_positions lexbuf =
+    let start_p = lexing_position_start lexbuf
+    and curr_p = lexing_position_curr lexbuf
+    in
+    (start_p, curr_p)
+
+  let lexeme_length t = T.lexeme_length t.sedlexing
+  let lexeme_char t = T.lexeme_char t.sedlexing
+
+  let next_f1 lexbuf ~on_some ~on_none param =
+    let ui = __private__next_int lexbuf in
+    if ui == -1
+    then on_none param
+    else on_some param (Uchar.unsafe_of_int ui)
+
+  let [@inline always] next_f2 lexbuf ~on_some ~on_none p1 p2 =
+    let ui = __private__next_int lexbuf in
+    if ui == -1
+    then on_none p1 p2
+    else on_some p1 p2 (Uchar.unsafe_of_int ui)
+
+  let [@inline always] next_f3 lexbuf ~on_some ~on_none p1 p2 p3 =
+    let ui = __private__next_int lexbuf in
+    if ui == -1
+    then on_none p1 p2 p3
+    else on_some p1 p2 p3 (Uchar.unsafe_of_int ui)
+
+
+  module Utf8 = struct
+    let lexeme t = T.Utf8.lexeme t.sedlexing
+    let sub_lexeme t = T.Utf8.sub_lexeme t.sedlexing
+
+    let from_string s =
+      { sedlexing =
+          (T.Utf8.from_string s)
+      ; override_start_position = None
+      }
+  end
+
+  module Latin1 = struct
+    let lexeme_char t = T.Latin1.lexeme_char t.sedlexing
+
+  end
+
+end
+
 exception Lexer_error of 
     { state : string
     ; pos_start : int * int
@@ -149,7 +229,7 @@ let literal_char_prefix lexbuf =
   | 'u' -> `U16
   | 'U' -> `U32
   | '\'' -> `Plain
-  | _ -> failwith "invalid literal character prefix"
+  | _ -> raise_lexer_error lexbuf "invalid literal character prefix"
 
 let literal_string_prefix lexbuf =
   match Sedlexing.Latin1.lexeme_char lexbuf 0 with
@@ -174,15 +254,17 @@ let rec initial lexbuf : Token.t =
   | preprocessing_number          ->  
     raise_lexer_error lexbuf "These characters form a preprocessor number, but not a constant" 
   | (Chars "LuU" | ""), "'"       ->
-    (* CR smuenzel: check token positions *)
+    let start_pos = Sedlexing.lexing_position_start lexbuf in
     let kind = literal_char_prefix lexbuf in
     let element = char lexbuf in
     let excess_elements = char_literal_end lexbuf in
+    Sedlexing.override_start_position lexbuf start_pos;
     CONSTANT_CHAR { kind; value = element :: excess_elements }
   | (Chars "LuU" | "" | "u8"), "\"" ->
-    (* CR smuenzel: check token positions *)
+    let start_pos = Sedlexing.lexing_position_start lexbuf in
     let kind = literal_string_prefix lexbuf in
     let value = string_literal lexbuf in
+    Sedlexing.override_start_position lexbuf start_pos;
     STRING_LITERAL [ { kind; value } ]
   | "..."                         ->  ELLIPSIS 
   | "+="                          ->  ADD_ASSIGN 

@@ -72,7 +72,7 @@ let convert_string_rev sr =
   | [] -> []
   | _ ->
     let str = String.concat " " (List.rev sr) in
-    let lexbuf = Sedlexing.Utf8.from_string str in
+    let lexbuf = C11lexer.Sedlexing.Utf8.from_string str in
     convert_lexbuf lexbuf
 
 let rec consolidate_s ~acc =

@@ -4,6 +4,8 @@
 
 open Core
 
+module Sedlexing = C11lexer.Sedlexing
+
 module Ast = Model_ast.Ast.Make(Model_ast.Ast_types.Dummy_located)
 
 module P(Context : C11parser.Context.Packed) =
