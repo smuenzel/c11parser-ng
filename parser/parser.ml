@@ -3,10 +3,10 @@
  *)
 
 module Make
-    (Gen : Astgen_intf.S)
+    (Gen : Astgen_intf.S with type Located.position = Lexing.position)
     (Context : Context.Packed)
 = struct
-  module Raw = Parser_raw.Make (Gen) (Context)
+  module Raw = Parser_raw.Make (Lexing) (Gen) (Context)
 
   type token = Raw.token
 
@@ -46,7 +46,8 @@ module Make
     Printexc.register_printer syntax_error_printer
 
   let wrap f =
-    fun (lexbuf : Sedlexing.lexbuf) ->
+    fun (lexbuf : C11lexer.Sedlexing.lexbuf) ->
+    let module Sedlexing = C11lexer.Sedlexing in
     let state =
       C11lexer.State.create_default
         ~is_typedefname:Context.is_typedefname
