@@ -30,6 +30,28 @@ let line lexbuf =
 
    *)
 
+module Reparser = struct
+  type t = 
+    { mutable tokens : Pre_token.t list
+    ; mutable pos_current : Lexing.position
+    ; mutable pos_start : Lexing.position
+    }
+
+  module As_sedlex = struct
+    type lexbuf = t
+
+  end
+
+  module As_lexing = struct
+    type position = Lexing.position
+    type lexbuf = t
+
+    let lexeme_start_p _ = assert false
+    let lexeme_end_p _ = assert false
+  end
+
+end
+
 let rec getline ~acc lexbuf =
   let (_, token) as result =
     Pre_token.next_token ~produce:Pre_token.produce_with_position lexbuf

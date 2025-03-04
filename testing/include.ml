@@ -60,12 +60,13 @@ end
 let expression_from_tokens (l : C11lexer.Token.t list) =
   let open No_pos in
   let context = C11parser.Context.create_packed () in
-  let module Raw = C11parser.Parser_raw.Make(Lex)(Ast) (val context) in
+  let module Wrapped_lexer = C11lexer.Wrapped_lexer(No_pos.Lex) in
+  let module Raw = C11parser.Parser_raw.Make(Wrapped_lexer)(Ast) (val context) in
   let lexbuf = Lex.create l in
   let state = C11lexer.State.create_default () in
-  let lexer = C11lexer.wrap_lexer ~lexer:Lex.lexer state in
+  let wrapped_lexer = Wrapped_lexer.create ~state ~inner_lexer:lexbuf in
   try
-    Raw.single_expression lexer lexbuf
+    Raw.single_expression Wrapped_lexer.lexer wrapped_lexer
   with
   | Raw.Error e ->
     let msg =
