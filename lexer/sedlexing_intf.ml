@@ -1,17 +1,6 @@
 
-module type Position = sig
-  type t
-
-  val to_lexing_position : t -> Lexing.position
-  val is_beginning_of_line : t -> bool
-
-  val dummy : t
-  val incr : t -> t
-  val min : t -> t -> t
-end
-
 module type S = sig
-  module Position : Position
+  module Position : Util.Position_intf.S
   type lexbuf
 
   val start : lexbuf -> unit

@@ -15,7 +15,7 @@ module Sedlexing_with_position = Sedlexing_with_position
 module Sedlexing = struct
   module T = Sedlexing
 
-  module Position = Lexing_position
+  module Position = Util.Lexing_position
 
   type lexbuf = 
     { sedlexing: T.lexbuf

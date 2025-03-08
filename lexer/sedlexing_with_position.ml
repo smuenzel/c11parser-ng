@@ -1,5 +1,5 @@
 
-module Make(Position : Sedlexing_intf.Position) = struct
+module Make(Position : Util.Position_intf.S) = struct
   type acc = (Position.t * Uchar.t)
 
   type state =
