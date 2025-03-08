@@ -30,11 +30,11 @@ let line lexbuf =
 
    *)
 
+(*
 module Reparser = struct
   type t = 
-    { mutable tokens : Pre_token.t list
-    ; mutable pos_current : Lexing.position
-    ; mutable pos_start : Lexing.position
+    { mutable tokens : (Pre_token.Token_properties.t * Pre_token.t) list
+    ; mutable properties : Pre_token.Token_properties.t
     }
 
   module As_sedlex = struct
@@ -48,9 +48,20 @@ module Reparser = struct
 
     let lexeme_start_p _ = assert false
     let lexeme_end_p _ = assert false
+
+    let lexer t =
+      match t.tokens with
+      | [] ->
+        t.properties <- Pre_token.Token_properties.dummy;
+        C11lexer.Token.EOF
+      | (properties, token) :: rest ->
+        t.properties <- properties;
+        t.tokens <- rest;
+        ()
   end
 
 end
+   *)
 
 let rec getline ~acc lexbuf =
   let (_, token) as result =

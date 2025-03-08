@@ -121,6 +121,11 @@ module Token_properties = struct
   type t =
     { start : Position.t; end_ : Position.t }
   [@@deriving sexp]
+
+  let dummy =
+    { start = Lexing.dummy_pos
+    ; end_ = Lexing.dummy_pos
+    }
 end
 
 type header_name_kind =
