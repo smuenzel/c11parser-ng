@@ -1,6 +1,6 @@
 
 module type S = sig
-  module Position : Util.Position_intf.S
+  module Position : Position_intf.S
   type lexbuf
 
   val start : lexbuf -> unit
@@ -23,6 +23,5 @@ module type S = sig
 
   module Latin1 : sig
     val lexeme_char : lexbuf -> int -> char
-
   end
 end

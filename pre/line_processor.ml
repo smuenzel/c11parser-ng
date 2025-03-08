@@ -63,7 +63,7 @@ module Reparser = struct
 end
    *)
 
-module Utf8_list_stream(P : Util.Position_intf.S) = struct
+module Utf8_list_stream(P : C11util.Position_intf.S) = struct
   let create (strings : (P.t * P.t * string) list) : (P.t * Uchar.t) Seq.t =
     let rec aux ((_, p1, s) as curr) i pcurr rest () =
       if i = String.length s

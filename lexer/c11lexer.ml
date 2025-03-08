@@ -8,14 +8,11 @@
 
 module Token = Token
 module Literal = Literal
-module Lexing_intf = Lexing_intf
-module Sedlexing_intf = Sedlexing_intf
-module Sedlexing_with_position = Sedlexing_with_position
 
 module Sedlexing = struct
   module T = Sedlexing
 
-  module Position = Util.Lexing_position
+  module Position = C11util.Lexing_position
 
   type lexbuf = 
     { sedlexing: T.lexbuf
@@ -108,7 +105,7 @@ let print_lexer_error = function
 let () =
   Printexc.register_printer print_lexer_error
 
-module Make(Sedlexing : Sedlexing_intf.S) = struct
+module Make(Sedlexing : C11util.Sedlexing_intf.S) = struct
   let raise_lexer_error lexbuf state =
     let pos_start, pos_end = Sedlexing.lexing_positions lexbuf in
     let pos_start = Sedlexing.Position.to_lexing_position pos_start in
@@ -469,7 +466,7 @@ module Make(Sedlexing : Sedlexing_intf.S) = struct
       else initial lexbuf
   end
 
-  module _ : Lexing_intf.S_with_token = struct
+  module _ : C11util.Lexing_intf.S_with_token = struct
     include Raw_lexer
   end
 
@@ -518,7 +515,7 @@ module Make(Sedlexing : Sedlexing_intf.S) = struct
       fun lexbuf -> lexer t lexbuf
   end
 
-  module Wrapped_lexer(Inner_lexer : Lexing_intf.S_with_token with type token = Token.t) = struct
+  module Wrapped_lexer(Inner_lexer : C11util.Lexing_intf.S_with_token with type token = Token.t) = struct
     type lexbuf = 
       { state : State.t
       ; inner_lexer : Inner_lexer.lexbuf

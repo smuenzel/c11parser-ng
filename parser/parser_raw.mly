@@ -11,7 +11,7 @@
    has 3 reduce/reduce conflicts on RPAREN, LPAREN, and LBRACK. If you
    modify the grammar, you should check that this is still the case. *)
 
-%parameter<Lexing : C11lexer.Lexing_intf.S>
+%parameter<Lexing : C11util.Lexing_intf.S>
 %parameter<Gen : Astgen_intf.S with type Located.position = Lexing.position>
 %parameter<Context : Context.Packed>
 

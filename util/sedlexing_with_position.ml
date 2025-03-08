@@ -1,5 +1,5 @@
 
-module Make(Position : Util.Position_intf.S) = struct
+module Make(Position : Position_intf.S) = struct
   type acc = (Position.t * Uchar.t)
 
   type state =
