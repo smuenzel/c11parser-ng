@@ -1,12 +1,5 @@
 
-module type S_position = sig
-  type t
-  
-  val dummy : t
-  val incr : t -> t
-end
-
-module Make(Position : S_position) = struct
+module Make(Position : Sedlexing_intf.Position) = struct
   type acc = (Position.t * Uchar.t)
 
   type state =

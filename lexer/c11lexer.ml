@@ -13,6 +13,8 @@ module Lexing_intf = Lexing_intf
 module Sedlexing = struct
   module T = Sedlexing
 
+  module Position = Lexing_position
+
   type lexbuf = 
     { sedlexing: T.lexbuf
     ; mutable override_start_position : Lexing.position option
@@ -107,6 +109,8 @@ let () =
 module Make(Sedlexing : Sedlexing_intf.S) = struct
   let raise_lexer_error lexbuf state =
     let pos_start, pos_end = Sedlexing.lexing_positions lexbuf in
+    let pos_start = Sedlexing.Position.to_lexing_position pos_start in
+    let pos_end = Sedlexing.Position.to_lexing_position pos_end in
     raise (Lexer_error
              { state
              ; pos_start = pos_start.pos_lnum, pos_start.pos_cnum - pos_start.pos_bol
@@ -450,7 +454,7 @@ module Make(Sedlexing : Sedlexing_intf.S) = struct
 
   module Raw_lexer = struct
     type token = Token.t
-    type position = Lexing.position
+    type position = Sedlexing.Position.t
     type lexbuf = Sedlexing.lexbuf
 
     let lexeme_start_p lexbuf = Sedlexing.lexing_position_start lexbuf
@@ -458,10 +462,9 @@ module Make(Sedlexing : Sedlexing_intf.S) = struct
 
     let lexer (lexbuf : Sedlexing.lexbuf) : Token.t =
       let pos = Sedlexing.lexing_position_curr lexbuf in
-      if pos.pos_cnum = pos.pos_bol then
-        initial_linebegin lexbuf
-      else
-        initial lexbuf
+      if Sedlexing.Position.is_beginning_of_line pos
+      then initial_linebegin lexbuf
+      else initial lexbuf
   end
 
   module _ : Lexing_intf.S_with_token = struct
