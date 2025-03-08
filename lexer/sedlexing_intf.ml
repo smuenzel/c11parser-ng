@@ -7,6 +7,7 @@ module type Position = sig
 
   val dummy : t
   val incr : t -> t
+  val min : t -> t -> t
 end
 
 module type S = sig

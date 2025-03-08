@@ -63,6 +63,31 @@ module Reparser = struct
 end
    *)
 
+module Utf8_list_stream(P : C11lexer.Sedlexing_intf.Position) = struct
+  let create (strings : (P.t * P.t * string) list) : (P.t * Uchar.t) Seq.t =
+    let rec aux ((_, p1, s) as curr) i pcurr rest () =
+      if i = String.length s
+      then begin
+        match rest with
+        | [] -> Seq.Nil
+        | (p0, _,_) as hd :: tl -> aux hd 0 p0 tl ()
+      end
+      else begin
+        let result = String.get_utf_8_uchar s i in
+        if Uchar.utf_decode_is_valid result
+        then begin
+          let p = P.incr pcurr in
+          let p = P.min p p1 in
+          Seq.Cons ((p, Uchar.utf_decode_uchar result), aux curr (i + 1) p rest)
+        end
+        else assert false
+      end
+    in
+    match strings with
+    | [] -> (fun () -> Seq.Nil)
+    | (p0, _, _) as hd :: tl -> aux hd 0 p0 tl
+end
+
 let rec getline ~acc lexbuf =
   let (_, token) as result =
     Pre_token.next_token ~produce:Pre_token.produce_with_position lexbuf

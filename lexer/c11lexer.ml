@@ -9,6 +9,8 @@
 module Token = Token
 module Literal = Literal
 module Lexing_intf = Lexing_intf
+module Sedlexing_intf = Sedlexing_intf
+module Sedlexing_with_position = Sedlexing_with_position
 
 module Sedlexing = struct
   module T = Sedlexing
