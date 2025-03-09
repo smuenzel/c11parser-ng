@@ -2,9 +2,11 @@
 module Make(Position : Position_intf.S) = struct
   type acc = (Position.t * Uchar.t)
 
+  module Position = Position
+
   type state =
     { output_buffer : Buffer.t
-    ; mutable buffer : acc Seq.t
+    ; mutable buffer : acc Lazy_seq.t
     ; mutable lexeme_rev : acc list
     ; mutable lexeme_start : Position.t
     ; mutable lexeme_length : int
@@ -20,7 +22,7 @@ module Make(Position : Position_intf.S) = struct
 
   (* Public interface *)
 
-  let create (s : acc Seq.t) =
+  let create (s : acc Lazy_seq.t) =
     let state =
       { output_buffer = Buffer.create 32
       ; buffer = s
@@ -40,14 +42,14 @@ module Make(Position : Position_intf.S) = struct
     state.lexeme_rev <- [];
     state.lexeme_length <- 0;
     state.lexeme_start <-
-      begin match Seq.uncons state.buffer with
+      begin match Lazy_seq.uncons state.buffer with
         | None -> Position.dummy
         | Some ((p,_),_) -> p
       end
 
   let __private__next_int t =
     let state = t.state in
-    match Seq.uncons state.buffer with
+    match Lazy_seq.uncons state.buffer with
     | None -> -1
     | Some (((_, c) as v), rest) ->
       state.lexeme_rev <- v :: state.lexeme_rev;

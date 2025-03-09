@@ -91,6 +91,67 @@ module Sedlexing = struct
 
 end
 
+module State = struct
+  module Kind = struct
+    type t =
+      | Regular          (* Nothing to recall from the previous tokens. *)
+      | Atomic           (* The previous token was [ATOMIC]. If an opening
+                            parenthesis follows, then it needs special care. *)
+      | Ident of string  (* We have seen an identifier: we have just
+                             emitted a [NAME] token. The next token will be
+                             either [VARIABLE] or [TYPE], depending on
+                             what kind of identifier this is. *)
+  end
+
+  type t =
+    { mutable kind : Kind.t
+    ; is_typedefname : string -> bool
+    ; atomic_strict_syntax : bool
+    }
+
+  let create_default
+      ?(is_typedefname = fun _ -> false) ?(atomic_strict_syntax=false) () =
+    { kind = Regular
+    ; is_typedefname
+    ; atomic_strict_syntax
+    }
+
+  let finish_token t : Token.t option =
+    match t.kind with
+    | Ident id ->
+      t.kind <- Regular;
+      if t.is_typedefname id then Some (TYPE id) else Some (VARIABLE id)
+    | _ -> None
+
+  exception Invalid_state
+
+  let process_token t token =
+    match t.kind with
+    | Ident _ -> raise Invalid_state
+    | Atomic
+    | Regular ->
+      match t.kind, (token : Token.t) with
+      | _, NAME id ->
+        t.kind <- Ident id;
+        token
+
+      | Atomic, LPAREN ->
+        t.kind <- Regular;
+        ATOMIC_LPAREN
+
+      | _, ATOMIC ->
+        t.kind <- (if t.atomic_strict_syntax then Atomic else Regular);
+        token
+
+      | _, _ ->
+        t.kind <- Regular;
+        token
+
+  let wrap t lexer =
+    fun lexbuf -> lexer t lexbuf
+end
+
+
 exception Lexer_error of 
     { state : string
     ; pos_start : int * int
@@ -484,36 +545,7 @@ module Make(Sedlexing : C11util.Sedlexing_intf.S) = struct
          specially. *)
 
   (* This second lexer is implemented using a 3-state state machine, whose
-     states are as follows. *)
-
-  module State = struct
-    module Kind = struct
-      type t =
-        | Regular          (* Nothing to recall from the previous tokens. *)
-        | Atomic           (* The previous token was [ATOMIC]. If an opening
-                              parenthesis follows, then it needs special care. *)
-        | Ident of string  (* We have seen an identifier: we have just
-                               emitted a [NAME] token. The next token will be
-                               either [VARIABLE] or [TYPE], depending on
-                               what kind of identifier this is. *)
-    end
-
-    type t =
-      { mutable kind : Kind.t
-      ; is_typedefname : string -> bool
-      ; atomic_strict_syntax : bool
-      }
-
-    let create_default
-        ?(is_typedefname = fun _ -> false) ?(atomic_strict_syntax=false) () =
-      { kind = Regular
-      ; is_typedefname
-      ; atomic_strict_syntax
-      }
-
-    let wrap t lexer =
-      fun lexbuf -> lexer t lexbuf
-  end
+     states are defined above. *)
 
   module Wrapped_lexer(Inner_lexer : C11util.Lexing_intf.S_with_token with type token = Token.t) = struct
     type lexbuf = 
@@ -539,33 +571,26 @@ module Make(Sedlexing : C11util.Sedlexing_intf.S) = struct
     let lexer lexbuf : Token.t =
       let state = lexbuf.state in
       let result : Token.t =
-        match state.kind with
-        | Ident id ->
-          state.kind <- Regular;
-          if state.is_typedefname id then TYPE id else VARIABLE id
-        | Atomic
-        | Regular ->
-          let token = Inner_lexer.lexer lexbuf.inner_lexer in
-          match state.kind, (token : Token.t) with
-          | _, NAME id ->
-            state.kind <- Ident id;
-            token
-
-          | Atomic, LPAREN ->
-            state.kind <- Regular;
-            ATOMIC_LPAREN
-
-          | _, ATOMIC ->
-            state.kind <- (if state.atomic_strict_syntax then Atomic else Regular);
-            token
-
-          | _, _ ->
-            state.kind <- Regular;
-            token
+        match State.finish_token state with
+        | Some token -> token
+        | None ->
+          State.process_token state (Inner_lexer.lexer lexbuf.inner_lexer)
       in
       lexbuf.last_token <- lexbuf.current_token;
       lexbuf.current_token <- result;
       result
+
+    let lexer_with_position lexbuf =
+      let token = lexer lexbuf in
+      (lexeme_start_p lexbuf, lexeme_end_p lexbuf, token)
+
+    let all_with_position lexbuf =
+      let rec loop acc =
+        match lexer_with_position lexbuf with
+        | (_, _, EOF) -> List.rev acc
+        | token -> loop (token :: acc)
+      in
+      loop []
   end
 
   module Wrapped_lexer_default = Wrapped_lexer(Raw_lexer)

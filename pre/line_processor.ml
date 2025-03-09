@@ -63,30 +63,52 @@ module Reparser = struct
 end
    *)
 
-module Utf8_list_stream(P : C11util.Position_intf.S) = struct
-  let create (strings : (P.t * P.t * string) list) : (P.t * Uchar.t) Seq.t =
-    let rec aux ((_, p1, s) as curr) i pcurr rest () =
-      if i = String.length s
-      then begin
-        match rest with
-        | [] -> Seq.Nil
-        | (p0, _,_) as hd :: tl -> aux hd 0 p0 tl ()
-      end
-      else begin
-        let result = String.get_utf_8_uchar s i in
-        if Uchar.utf_decode_is_valid result
-        then begin
-          let p = P.incr pcurr in
-          let p = P.min p p1 in
-          Seq.Cons ((p, Uchar.utf_decode_uchar result), aux curr (i + 1) p rest)
-        end
-        else assert false
-      end
-    in
-    match strings with
-    | [] -> (fun () -> Seq.Nil)
-    | (p0, _, _) as hd :: tl -> aux hd 0 p0 tl
-end
+module Utf8_stream = C11util.List_stream.Utf8(C11util.Lexing_position)
+module Sedlexing_with_position = C11util.Sedlexing_with_position.Make(C11util.Lexing_position)
+module Lexer_x = C11lexer.Make(Sedlexing_with_position)
+
+let rec finish_stream
+    ~lexing_state
+    stream
+    (list : (Lexing.position * Lexing.position * C11lexer.Token.t) list)
+    rest
+  =
+  let stream = Utf8_stream.create (List.rev stream) in
+  let lexbuf = Sedlexing_with_position.create stream in
+  let lexbuf =
+    Lexer_x.Wrapped_lexer_default.create
+      ~state:lexing_state
+      ~inner_lexer:lexbuf
+  in
+  [ Lexer_x.Wrapped_lexer_default.all_with_position lexbuf ]
+  :: [ list ]
+  :: convert_tokens ~lexing_state ~stream:[] rest
+
+and convert_tokens ~lexing_state ~stream list =
+  match (list : (Lexing.position * Lexing.position * Pre_token.t) list) with
+  | [] ->
+    begin match stream with
+      | [] -> []
+      | stream ->
+        finish_stream ~lexing_state stream [] []
+    end
+  | (p0, p1, token) :: rest ->
+    match token with
+    | Eof -> 
+      finish_stream ~lexing_state stream [p0, p1, C11lexer.Token.EOF] rest
+    | Character_constant c ->
+      finish_stream ~lexing_state stream [p0, p1, CONSTANT_CHAR c] rest
+    | String_literal s ->
+      finish_stream ~lexing_state stream [p0, p1, STRING_LITERAL s] rest
+    | Newline
+    | Header_name _
+    | Preprocessing_number _
+    | Punctuator _
+    | Single_char _
+    | Identifier _ ->
+      let stream = (p0, p1, Pre_token.stringify token) :: stream in
+      convert_tokens ~lexing_state ~stream rest
+
 
 let rec getline ~acc lexbuf =
   let (_, token) as result =
@@ -104,21 +126,14 @@ let rec getline ~acc lexbuf =
 let getline lexbuf = getline ~acc:[] lexbuf
 
 let convert_token token : [`T of C11lexer.Token.t | `S of string ] list =
-  match (token : Pre_token.t) with
-  | Eof -> [ `T EOF ]
-  | Newline -> [ ]
-  | Character_constant c ->
-    [ `T (CONSTANT_CHAR c) ]
-  | String_literal s ->
-    [ `T (STRING_LITERAL s) ]
-  | Identifier "defined" ->
-    [ `T DEFINED ]
-  | Header_name _
-  | Preprocessing_number _
-  | Punctuator _
-  | Single_char _
-  | Identifier _ ->
-    [ `S (Pre_token.stringify token) ]
+  Relexer.relex_token
+    ~start_pos:()
+    ~end_pos:()
+    token
+    ~f_none:(fun ~start_pos:_ ~end_pos:_ () -> [])
+    ~f_token:(fun ~start_pos:_ ~end_pos:_ () token -> [ `T token ])
+    ~f_string:(fun ~start_pos:_ ~end_pos:_ () s -> [ `S s ])
+    ()
 
 let [@ocaml.tail_mod_cons] rec convert_lexbuf lexbuf =
   match C11lexer.initial lexbuf with
