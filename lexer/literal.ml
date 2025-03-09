@@ -31,6 +31,12 @@ module Char = struct
       | `U32
       ]
     [@@deriving sexp]
+
+    let to_string = function
+      | `Plain -> "'"
+      | `Wide -> "L'"
+      | `U16 -> "u'"
+      | `U32 -> "U'"
   end
 
   module Element = struct
@@ -59,6 +65,13 @@ module String = struct
       | `U32
       ]
     [@@deriving sexp]
+
+    let to_string = function
+      | `Plain -> "\""
+      | `Utf8 -> "u8\""
+      | `Wide -> "L\""
+      | `U16 -> "u\""
+      | `U32 -> "U\""
   end
 
   module Segment = struct

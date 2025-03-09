@@ -3,10 +3,10 @@
  *)
 
 module Make
-    (Gen : Astgen_intf.S)
+    (Gen : Astgen_intf.S with type Located.position = Lexing.position)
     (Context : Context.Packed)
 = struct
-  module Raw = Parser_raw.Make (Gen) (Context)
+  module Raw = Parser_raw.Make (C11lexer.Wrapped_lexer_default) (Gen) (Context)
 
   type token = Raw.token
 
@@ -46,26 +46,18 @@ module Make
     Printexc.register_printer syntax_error_printer
 
   let wrap f =
-    fun (lexbuf : Sedlexing.lexbuf) ->
+    fun (lexbuf : C11lexer.Sedlexing.lexbuf) ->
+    let module Sedlexing = C11lexer.Sedlexing in
     let state =
       C11lexer.State.create_default
         ~is_typedefname:Context.is_typedefname
         ()
     in
-    let old_lexbuf = Lexing.from_string "" in
-    let last_token = ref C11lexer.Token.EOF in
-    let current_token = ref C11lexer.Token.EOF in
-    let lexer (dummy_lexbuf : Lexing.lexbuf) =
-      let token = C11lexer.lexer state lexbuf in
-      let start_p, end_p = Sedlexing.lexing_positions lexbuf in
-      dummy_lexbuf.lex_start_p <- start_p;
-      dummy_lexbuf.lex_curr_p <- end_p;
-      last_token := !current_token;
-      current_token := token;
-      token
+    let wrapped_lexer =
+      C11lexer.Wrapped_lexer_default.create ~state ~inner_lexer:lexbuf
     in
     try
-      f lexer old_lexbuf
+      f C11lexer.Wrapped_lexer_default.lexer wrapped_lexer
     with
     | Raw.Error e ->
       let msg = 
@@ -76,8 +68,8 @@ module Make
       let p = Sedlexing.lexing_position_curr lexbuf in
       raise (Syntax_error 
                { pos = p.pos_lnum, p.pos_cnum - p.pos_bol
-               ; last_token = !last_token
-               ; current_token = !current_token
+               ; last_token = wrapped_lexer.last_token
+               ; current_token = wrapped_lexer.current_token
                ; msg
                ; state = e
                })
@@ -88,8 +80,8 @@ module Make
       in
       raise (Syntax_error 
                { pos = l0, c0
-               ; last_token = !last_token
-               ; current_token = !current_token
+               ; last_token = wrapped_lexer.last_token
+               ; current_token = wrapped_lexer.current_token
                ; msg
                ; state = 0
                })

@@ -7,7 +7,7 @@ open Include
 
 let%expect_test "" =
   Printexc.record_backtrace false;
-  test
+  test_parser
     {|
 typedef int x;
 
@@ -17,12 +17,12 @@ _Bool x { q while
 [@@expect.uncaught_exn {|
   ( "Syntax error at line 4, column 17:\
    \n'The last token was expected to be a typedef name, but it is a variable name.'\
-   \n(last token: (VARIABLE q), current token: WHILE, state: 425)")
+   \n(last token: (VARIABLE q), current token: WHILE, state: 427)")
   |}]
 
 let%expect_test "" =
   Printexc.record_backtrace false;
-  test
+  test_parser
     {|
 typedef int x;
 
@@ -40,7 +40,7 @@ _Bool x { q : ; }
 
 let%expect_test "" =
   Printexc.record_backtrace false;
-  test
+  test_parser
     {|
 typedef int x;
 
@@ -61,7 +61,7 @@ _Bool x() { q : ; }
 
 
 let%expect_test "" =
-  test
+  test_parser
     {|
 typedef int x;
 
@@ -71,5 +71,5 @@ _Bool _Bool { q while
 [@@expect.uncaught_exn {|
   ( "Syntax error at line 4, column 11:\
    \n'Unknown error'\
-   \n(last token: BOOL, current token: BOOL, state: 388)")
+   \n(last token: BOOL, current token: BOOL, state: 390)")
   |}]

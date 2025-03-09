@@ -11,7 +11,8 @@
    has 3 reduce/reduce conflicts on RPAREN, LPAREN, and LBRACK. If you
    modify the grammar, you should check that this is still the case. *)
 
-%parameter<Gen : Astgen_intf.S>
+%parameter<Lexing : C11util.Lexing_intf.S>
+%parameter<Gen : Astgen_intf.S with type Located.position = Lexing.position>
 %parameter<Context : Context.Packed>
 
 %token<string> NAME
@@ -69,6 +70,9 @@
 %token VOID "void"
 %token VOLATILE "volatile"
 %token WHILE "while"
+
+(* For preprocessor only *)
+%token DEFINED "defined"
 
 %token ELLIPSIS "..."
 %token ADD_ASSIGN "+="
@@ -163,7 +167,7 @@
 (* Helpers *)
 
 %public %inline located(X):
-  x=X { Gen.locate ~start:$startpos(x) ~end_:$endpos(x) x }
+  x=X { Gen.Located.locate ~start:$startpos(x) ~end_:$endpos(x) x }
 
 %inline get_context(X):
   x=X { fst x }
@@ -341,6 +345,8 @@ let unary_expression :=
 { Gen.Expr.unary (Gen.Unary_operator.sizeof, e) }
 | "sizeof"; "("; ~=type_name; ")";
 < Gen.Expr.sizeof >
+| "defined"; e=located(unary_expression);
+{ Gen.Expr.unary (Gen.Unary_operator.defined, e) }
 | "_Alignof"; "("; ~=type_name; ")";
 < Gen.Expr.alignof >
 
